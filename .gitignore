@@ -1,0 +1,8 @@
+# data, environments and outputs (see README: everything under work/)
+work/
+firmware/build*/
+*.elf
+*.bin
+*.hex
+*.map
+__pycache__/

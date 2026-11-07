@@ -1,0 +1,39 @@
+cff-version: 1.2.0
+message: "If you use this code or the N-People dataset, please cite the paper (preprint/MCSoC 2027 submission) and the dataset record."
+title: "GenX320 person detection on an STM32F746: firmware, recording tools and the N-People dataset"
+authors:
+  - family-names: Yousefzadeh
+    given-names: Amirreza
+    affiliation: "University of Twente, CAES"
+    email: a.yousefzadeh@utwente.nl
+repository-code: "https://github.com/AmirrezaYousefzadeh/genx320-person-detection"
+license: Apache-2.0
+version: 1.0.0
+date-released: 2026-11-07
+keywords:
+  - event camera
+  - GenX320
+  - person detection
+  - microcontroller
+  - tinyML
+  - dataset
+preferred-citation:
+  type: conference-paper
+  title: "Live Person Detection from an Event Camera on a Cortex-M7: A Recorded Dataset, In-Sensor Preprocessing, and Where the Cycles Go"
+  authors:
+    - family-names: Yousefzadeh
+      given-names: Amirreza
+    - family-names: Tang
+      given-names: Guangzhi
+    - family-names: Phadte
+      given-names: Pratik
+    - family-names: Gatt
+      given-names: Pierluigi
+    - family-names: Reterink
+      given-names: Bas
+    - family-names: Canitz
+      given-names: Mustafa
+  conference:
+    name: "IEEE International Symposium on Embedded Multicore/Many-core Systems-on-Chip (MCSoC)"
+  year: 2027
+  notes: "submitted; the dataset N-People: 4TU.ResearchData, doi:10.4121/e9e04333-cc28-4bfe-9079-7bb252203b02, licence CC BY-NC-SA 4.0"
