@@ -112,6 +112,4 @@ https://github.com/AmirrezaYousefzadeh/genx320-person-detection.
 
 ## Citation
 
-Dataset: A. Yousefzadeh, N-People v1.0, 4TU.ResearchData, 2026, DOI 10.4121/e9e04333-cc28-4bfe-9079-7bb252203b02.
-Paper: Yousefzadeh et al., "Live person detection from an event camera on a Cortex-M7: a recorded dataset, in-sensor
-preprocessing, and where the cycles go" (manuscript; the reference follows on publication).
+Dataset: N-People v1.0, 4TU.ResearchData, DOI 10.4121/e9e04333-cc28-4bfe-9079-7bb252203b02.
