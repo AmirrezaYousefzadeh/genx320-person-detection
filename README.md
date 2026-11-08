@@ -1,12 +1,14 @@
 # Live person detection from an event camera on a Cortex-M7
 
 Code, firmware and tools of the paper *"Live Person Detection from an Event Camera on a Cortex-M7: A Recorded
-Dataset, In-Sensor Preprocessing, and Where the Cycles Go"* (A. Yousefzadeh et al., University of Twente, submitted
-to IEEE MCSoC 2027), and of the **N-People** dataset recorded with it.
+Dataset, In-Sensor Preprocessing, and Where the Cycles Go"*, and of the **N-People** dataset recorded with it.
 
 <p align="center">
-  <img src="docs/demo_board.jpg" alt="GenX320 starter kit on an STM32F746G-DISCO showing a detected person" width="420">
-  <br><em>The demonstrator: the board finds the person, counts the people in view and shows the event rate and the network time.</em>
+  <img src="docs/demo_board.jpg" alt="GenX320 starter kit on an STM32F746G-DISCO" height="300">
+  <img src="docs/lcd_now.png" alt="The board's display: event view with person boxes, people count, event rate, network time" height="300">
+  <br><em>The kit, and what its display shows with the current firmware (captured from the board over the debug link
+  while MOT17-09 plays on a monitor in front of the sensor: 2 people, 440 ms per network run, 2 updates per second).
+  The photo was taken with an early, slower firmware version.</em>
 </p>
 
 A Prophesee **GenX320** event camera (320x320) on an **STM32F746G-DISCO** board (Cortex-M7 at 216 MHz, 320 KB SRAM,
@@ -16,11 +18,12 @@ own display. No PC in the loop.
 
 - **Accuracy:** 0.70 AP50 on the public PEDRo benchmark at 160 px (0.75 at 192 px), measured with the int8 files
   that run on the board.
-- **Speed:** 360 ms per network run at 160 px, about two updates per second with the event decoding and display.
+- **Speed:** 360 ms per network run at 160 px on a stored picture, 430-460 ms live with the event decoding running,
+  about two updates per second.
 - **Dataset:** N-People, 172 k labelled 50 ms pictures, 1.21 M person boxes, recorded with this setup by replaying
   annotated pedestrian videos (MOT17, PersonPath22) on a monitor in front of the sensor, plus room recordings:
-  4TU.ResearchData, [doi:10.4121/e9e04333-cc28-4bfe-9079-7bb252203b02](https://doi.org/10.4121/e9e04333-cc28-4bfe-9079-7bb252203b02)
-  (reserved; live once the record is published). Its description: [`docs/N-People.md`](docs/N-People.md).
+  4TU.ResearchData, [doi:10.4121/e9e04333-cc28-4bfe-9079-7bb252203b02](https://doi.org/10.4121/e9e04333-cc28-4bfe-9079-7bb252203b02).
+  Its description: [`docs/N-People.md`](docs/N-People.md).
 
 ## Repository
 
@@ -132,4 +135,4 @@ PersonPath22; do not use it to identify people).
 
 See `CITATION.cff`. Dataset: A. Yousefzadeh, *N-People: person detection with a GenX320 event camera, recorded from a
 monitor and in a room*, 4TU.ResearchData, 2026, doi:10.4121/e9e04333-cc28-4bfe-9079-7bb252203b02. The paper's
-reference follows on acceptance.
+reference follows on publication.
