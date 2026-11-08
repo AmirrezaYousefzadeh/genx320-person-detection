@@ -4,11 +4,9 @@ Code, firmware and tools of the paper *"Live Person Detection from an Event Came
 Dataset, In-Sensor Preprocessing, and Where the Cycles Go"*, and of the **N-People** dataset recorded with it.
 
 <p align="center">
-  <img src="docs/demo_board.jpg" alt="GenX320 starter kit on an STM32F746G-DISCO" height="300">
-  <img src="docs/lcd_now.png" alt="The board's display: event view with person boxes, people count, event rate, network time" height="300">
-  <br><em>The kit, and what its display shows with the current firmware (captured from the board over the debug link
-  while MOT17-09 plays on a monitor in front of the sensor: 2 people, 440 ms per network run, 2 updates per second).
-  The photo was taken with an early, slower firmware version.</em>
+  <img src="docs/demo_board.jpg" alt="GenX320 starter kit on an STM32F746G-DISCO with person boxes, people count, event rate and network time on its display" width="420">
+  <br><em>The demonstrator. The screen shows the current firmware: 2 people found, 445 k events/s, 455 ms per network
+  run (the display content is a capture from the running board, placed into the photo).</em>
 </p>
 
 A Prophesee **GenX320** event camera (320x320) on an **STM32F746G-DISCO** board (Cortex-M7 at 216 MHz, 320 KB SRAM,
