@@ -12,7 +12,7 @@ Makefile picks the file of the chosen model).
 
 | model | input | what | paper |
 |---|---|---|---|
-| `person_room_v7_160_hf_int8` | 160 | **the demo** (default build): monitor passes + room recordings, float head | the deployed network: test-set table (row 1), speed and power |
+| `person_room_v7_160_hf_int8` | 160 | **the demo** (default build): monitor passes + room recordings, float head; stopping epoch picked on the test sequences | the network on the board: speed, power; reported next to row 1 of the test-set table (its clean retraining) |
 | `person_room_v7_160_int8` | 160 | the same network, whole int8 (`HEAD_FLOAT=0`) | int8 rows |
 | `person_e1b_160_hf_int8` | 160 | the demo network fine-tuned further with simulated events | "+ simulated pictures" |
 | `person_room_v7_192_hf_int8` | 192 | the demo network at 192 px, float head | timing at 192 px |
