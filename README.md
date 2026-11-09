@@ -5,7 +5,7 @@ Dataset, In-Sensor Preprocessing, and Where the Cycles Go"*, and of the **N-Peop
 
 <p align="center">
   <img src="docs/demo.gif" alt="The board running live: boxes follow the people walking in front of the sensor, the count and the network time update about twice a second" height="400">
-  <br><em>The board running live (full-quality video: <a href="docs/demo.mp4">docs/demo.mp4</a>). It finds the people,
+  <br><em>The board running live. It finds the people,
   counts them and shows the event rate and the network time on its own display.</em>
 </p>
 
