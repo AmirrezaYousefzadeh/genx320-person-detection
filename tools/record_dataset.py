@@ -88,9 +88,24 @@ def load_gt_ignore(seq_dir):
     return ign
 
 
+def local_seq_dir(path):
+    """The source sequence of a segment on this machine: segment.json stores the path on the recording PC
+    (/.../work/datasets/<...>); elsewhere the same sequence is looked up under this repository's work/datasets/."""
+    p = Path(path)
+    if p.exists():
+        return p
+    parts = p.parts
+    if "datasets" in parts:
+        local = ROOT / "work" / Path(*parts[parts.index("datasets"):])
+        if local.exists():
+            return local
+    sys.exit(f"source sequence {path} not found: put MOT17 / PersonPath22 (and their 60 fps renderings, tools/make60.py "
+             f"and tools/pp22_prep.py) under {ROOT / 'work/datasets'} (see the README)")
+
+
 def label_segment(out, window_ms=50, n_previews=4, min_events=20):
     seg = json.loads((out / "segment.json").read_text())
-    seq_dir = seg["seq_dir"]
+    seq_dir = local_seq_dir(seg["seq_dir"])
     with open(out / "events.raw", "rb") as f:
         if f.read(8).startswith(b"% histo"):
             return label_histo_segment(out, seg, seq_dir, n_previews, min_events)

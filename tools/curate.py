@@ -1,4 +1,4 @@
-"""Data curation of the recorded event dataset (Amir, 2026-11-06: find the data that is still wrong, inspect it).
+"""Data curation of the recorded event dataset: find the data that is still wrong, and inspect it.
 
   align  ROOT[,ROOT]  per segment: does the label geometry and timing fit the events? The label offset (dx, dy) and the
                       time shift (pictures) that put the most events inside the boxes, and the contrast (events per

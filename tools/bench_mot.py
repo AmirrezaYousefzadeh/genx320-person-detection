@@ -1,6 +1,6 @@
 """Test bench: play a MOT17 sequence on the monitor, log the board's detections, score them against MOT17's boxes.
 
-Needs: X on :1 (tools/xorg), work/calib/calib.json (tools/calibrate.py), the board on /dev/ttyACM0.
+Needs: X on :1 (tools/xserver.sh), work/calib/calib.json (tools/calibrate.py), the board on /dev/ttyACM0 (GENX_SERIAL=).
   run   SEQ_DIR SECONDS OUT_DIR   shows SEQ_DIR/img1 at its frame rate (filling the stage, sides cropped),
         logs frame times and detections
   score OUT_DIR [--iou 0.5] [--latency MS] [--extra-latency MS] [--min-h 0.12] [--score S]   matches detections to the frame shown LATENCY ms before the

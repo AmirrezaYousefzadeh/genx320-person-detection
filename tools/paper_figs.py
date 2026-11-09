@@ -22,10 +22,13 @@ sys.path.insert(0, str(Path(__file__).parent))
 import evt2  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-FIG = ROOT / "paper/figures"
+FIG = ROOT / "paper/figures"  # created if missing
+FIG.mkdir(parents=True, exist_ok=True)
 BLUE, ORANGE, AQUA, YELLOW = "#2a78d6", "#eb6834", "#1baf7a", "#eda100"  # categorical slots 1-4 (validated palette)
 INK, INK2 = "#0b0b0b", "#52514e"
 plt.rcParams.update({"font.size": 8, "font.family": "serif", "axes.edgecolor": "#9a9a96", "axes.linewidth": 0.6,
+                     "font.serif": ["STIXGeneral", "Nimbus Roman", "Times New Roman", "DejaVu Serif"],
+                     "mathtext.fontset": "stix",  # Times-like, as the paper's text
                      "xtick.color": INK2, "ytick.color": INK2, "axes.labelcolor": INK, "text.color": INK,
                      "axes.spines.top": False, "axes.spines.right": False, "pdf.fonttype": 42})
 
@@ -51,9 +54,11 @@ def fig_pulse():
         ax.plot(x, cb, color=BLUE, lw=0.9, label="60 fps, interpolated")
         ax.set_ylabel("events / ms")
         ax.set_title(title, fontsize=8, loc="left", color=INK2)
-        ax.set_ylim(0, None)
+        ax.axhline(500, color=INK2, lw=0.6, ls=(0, (2, 2)))  # the sensor's rate controller (ERC) at 500 kev/s
+        ax.set_ylim(0, 620)
         ax.grid(axis="y", color="#e4e4e0", lw=0.5)
         ax.set_axisbelow(True)
+    axes[0].text(500, 515, "rate cap", fontsize=7, color=INK2, ha="right", va="bottom")
     axes[-1].set_xlabel("time (ms)")
     h, l = axes[0].get_legend_handles_labels()
     fig.legend(h, l, frameon=False, fontsize=7, ncol=2, loc="lower center", bbox_to_anchor=(0.55, -0.01))
@@ -103,13 +108,17 @@ def fig_pair(sim=None, seg="work/dataset_camp60_dark_z40_r0_g100/MOT17-02-FRCNN_
     log = (seg / "frames.log").read_text().splitlines()
     warp = next(l for l in log if l.startswith("warp ")).split()
     cx0, cy0, side = float(warp[1]), float(warp[2]), float(warp[3])
+    tx, ty, ts = (int(v) for v in warp[warp.index("target") + 1:warp.index("target") + 4])  # the crop's square in the picture
     src = ROOT / "work/datasets/mot17_60/train/MOT17-02-FRCNN/img1" / f"{frame + 1:06d}.jpg"
     img = cv2.cvtColor(cv2.imread(str(src)), cv2.COLOR_BGR2RGB)
     panels = [(img, "source frame and the crop (blue)", None)]
     crop = img[int(cy0):int(cy0 + side), int(cx0):int(cx0 + side)]
     panels.append((crop, "the crop on the screen", "crop"))
     pic = cv2.imread(str(seg / "pictures" / f"pic_{k:04d}.png"), cv2.IMREAD_GRAYSCALE)
-    panels.append((pic, "sensor picture, labels", read_labels(seg / "labels" / f"pic_{k:04d}.txt")))
+    S0 = pic.shape[0]
+    lab = [(c, (cx * S0 - tx) / ts, (cy * S0 - ty) / ts, w * S0 / ts, h * S0 / ts)  # to the crop's coordinates
+           for c, cx, cy, w, h in read_labels(seg / "labels" / f"pic_{k:04d}.txt")]
+    panels.append((pic[ty:ty + ts, tx:tx + ts], "sensor picture (the crop)", lab))
     if sim:
         sd = sorted(Path(sim).glob("MOT17-02-FRCNN_f00000_z40*"))
         if sd:
@@ -119,7 +128,11 @@ def fig_pair(sim=None, seg="work/dataset_camp60_dark_z40_r0_g100/MOT17-02-FRCNN_
             if sd[0].name.endswith("_flip"):  # the simulator mirrored this window: mirror it back
                 sp, lab = np.ascontiguousarray(sp[:, ::-1]), [(c, 1 - cx, cy, w, h) for c, cx, cy, w, h in lab]
             panels.append((sp, "simulated picture", lab))
-    fig, axes = plt.subplots(1, len(panels), figsize=(7.1, 2.0), gridspec_kw={"width_ratios": [1.5] + [1] * (len(panels) - 1)})
+    ratios = [im.shape[1] / im.shape[0] for im, _, _ in panels]  # equal heights
+    W, gap, top = 7.1, 0.06, 0.2  # inches
+    h_img = (W - gap * (len(panels) - 1)) / sum(ratios)
+    fig, axes = plt.subplots(1, len(panels), figsize=(W, h_img + top), gridspec_kw={"width_ratios": ratios})
+    fig.subplots_adjust(left=0, right=1, bottom=0, top=h_img / (h_img + top), wspace=gap * len(panels) / (W - gap))
     for ax, (im, title, labels) in zip(axes, panels):
         if labels == "crop":
             ax.imshow(im)
@@ -127,15 +140,14 @@ def fig_pair(sim=None, seg="work/dataset_camp60_dark_z40_r0_g100/MOT17-02-FRCNN_
             ax.imshow(im, cmap="gray", vmin=0, vmax=255, interpolation="nearest")
             S = im.shape[0]
             for c, cx, cy, w, h in labels or []:
-                if c == 0 or title.startswith("sensor"):
-                    ax.add_patch(plt.Rectangle(((cx - w / 2) * S, (cy - h / 2) * S), w * S, h * S, fill=False,
-                                               ec=ORANGE if c == 0 else YELLOW, lw=0.9, ls="-" if c == 0 else ":"))
+                ax.add_patch(plt.Rectangle(((cx - w / 2) * S, (cy - h / 2) * S), w * S, h * S, fill=False,
+                                           ec=ORANGE if c == 0 else BLUE, lw=1.0 if c == 0 else 1.1,
+                                           ls="-" if c == 0 else (0, (3, 1.5))))
         else:
             ax.imshow(im)
             ax.add_patch(plt.Rectangle((cx0, cy0), side, side, fill=False, ec=BLUE, lw=1.2))
-        ax.set_title(title, fontsize=7, color=INK2)
+        ax.set_title(title, fontsize=7, color=INK2, pad=3)
         ax.axis("off")
-    fig.tight_layout(pad=0.2)
     fig.savefig(FIG / "pair.pdf", dpi=200)
     print("wrote", FIG / "pair.pdf")
 

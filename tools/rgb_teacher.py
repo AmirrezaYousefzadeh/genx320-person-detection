@@ -1,4 +1,4 @@
-"""Curation with an RGB teacher (Amir's suggestion, 2026-11-06): a strong RGB person detector (Ultralytics YOLO11x,
+"""Curation with an RGB teacher: a strong RGB person detector (Ultralytics YOLO11x,
 COCO class person) runs on the source video frames that the monitor passes replay, and its detections are compared
 with the labels the dataset inherits from those videos (MOT17 train gt, PersonPath22 windows). Every recording of a
 frame shares that frame's labels, so a label fault in the source is a fault in every pass.

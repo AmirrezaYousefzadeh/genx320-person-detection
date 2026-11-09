@@ -8,8 +8,7 @@ flatbuffers==25.12.19
 matplotlib==3.11.2
 pillow==13.0.0
 pyserial==3.5
-# the monitor bench only
+# the monitor bench only (DDC/CI brightness: tools/ddc.py, no extra package)
 pygame==2.6.1
-monitorcontrol==4.2.0
 # the RGB-teacher curation only (YOLO11x)
 ultralytics==8.4.203

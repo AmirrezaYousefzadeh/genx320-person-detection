@@ -4,9 +4,10 @@ Quantising the whole network costs box precision: the head's 30 outputs (x, y, w
 int8 scale (deployed model, room recordings: AP50 0.891 / AP50:95 0.426 in float, 0.836 / 0.319 in int8, 0.880 / 0.399
 with the head in float). The body (everything up to the head's input, 10x10x256 at 160 px) stays int8 under TFLM +
 CMSIS-NN; the head, a 1x1 convolution with its batch normalisation folded in (256 -> 30, 0.77 M multiply-adds), runs in
-float in App/head_float.c (~10 ms on the Cortex-M7).
+float in App/head_float.c (on the Cortex-M7's FPU: 8 / 13 / 15 ms at 128 / 160 / 192 px).
 Writes OUT_body_int8.tflite (uint8 input, int8 output), OUT_head.npz (W 256x30, b 30) and
-firmware/App/head_float_weights.h; prints how far body+head is from the float model.
+OUT_head.h (the firmware header; tools/build_hf.sh copies it to firmware/PersonDetection/models/<MODEL>_head.h);
+prints how far body+head is from the float model.
 Usage: headfloat.py MODEL.keras OUT --data ROOT[,ROOT] [--size 160] [--n 300]
 """
 import argparse
@@ -59,7 +60,23 @@ def run_body(path, img):
     return (q - z) * s
 
 
+def write_header(W, b, path, source=""):
+    """the firmware header of a float head (W: 256 x 30, b: 30)"""
+    rows = ",\n".join("  {" + ", ".join(f"{v:.8e}f" for v in W[c]) + "}" for c in range(W.shape[0]))
+    h = Path(path)
+    h.write_text(f"/* Float detection head (tools/headfloat.py{' from ' + source if source else ''}): out[k] = b[k] + sum_c x[c] W[c][k],\n"
+                 f"   x = the int8 body output dequantised. Generated, do not edit. */\n"
+                 f"#define HEAD_C {W.shape[0]}\n#define HEAD_K {W.shape[1]}\n"
+                 f"static const float head_W[HEAD_C][HEAD_K] = {{\n{rows}\n}};\n"
+                 f"static const float head_b[HEAD_K] = {{" + ", ".join(f"{v:.8e}f" for v in b) + "};\n")
+    return h
+
+
 def main():
+    if len(sys.argv) == 4 and sys.argv[1] == "--header-from":  # headfloat.py --header-from HEAD.npz OUT.h
+        hw = np.load(sys.argv[2])
+        print("wrote", write_header(hw["W"], hw["b"], sys.argv[3], sys.argv[2]))
+        return
     ap = argparse.ArgumentParser()
     ap.add_argument("model")
     ap.add_argument("out")
@@ -87,13 +104,7 @@ def main():
         diffs.append(np.abs(ours - ref).max())
     print(f"body {body_path} ({body_path.stat().st_size} bytes), head {W.shape[0]}x{W.shape[1]}; max |body+head - float| "
           f"over 20 pictures: median {np.median(diffs):.3f}, max {np.max(diffs):.3f}")
-    h = ROOT / "firmware/App/head_float_weights.h"
-    rows = ",\n".join("  {" + ", ".join(f"{v:.8e}f" for v in W[c]) + "}" for c in range(W.shape[0]))
-    h.write_text(f"/* Float detection head (tools/headfloat.py from {Path(a.model).as_posix()}): out[k] = b[k] + sum_c x[c] W[c][k],\n"
-                 f"   x = the int8 body output dequantised. Generated, do not edit. */\n"
-                 f"#define HEAD_C {W.shape[0]}\n#define HEAD_K {W.shape[1]}\n"
-                 f"static const float head_W[HEAD_C][HEAD_K] = {{\n{rows}\n}};\n"
-                 f"static const float head_b[HEAD_K] = {{" + ", ".join(f"{v:.8e}f" for v in b) + "};\n")
+    h = write_header(W, b, f"{a.out}_head.h", Path(a.model).as_posix())
     print("wrote", h)
 
 

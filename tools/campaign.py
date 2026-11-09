@@ -1,4 +1,4 @@
-"""Dataset campaign on the monitor bench. Amir, 2026-11-06: a 20-hour campaign (the week-long plan of 2026-11-05 dropped).
+"""Dataset campaign on the monitor bench: passes, calibrations and copies run unattended for hours.
 
 The plan is work/campaign/plan.json, read again before every step, so it can change while the campaign runs:
   {"end": "2026-11-06T20:00:00", "copy_s": 155, "record_s": 20,
@@ -13,7 +13,7 @@ copied and labelled first, oldest first; other recordings still on the card (the
 time to spare. At "end" the board sleeps and the campaign exits; anything left stays on the card.
 
 Around every pass the board is recalibrated (the drift between the two calibrations goes to the pass's
-CONDITIONS.json, drift_px). With nothing to do the board sleeps (Amir's rule). A board found running while the
+CONDITIONS.json, drift_px). With nothing to do the board sleeps. A board found running while the
 campaign left it asleep belongs to someone else for up to 3 h: the campaign leaves it alone. The build on the board
 must be work/campaign/flashed.elf (the tools read sd_ctrl and nn_pic from it): with another build flashed it waits.
 

@@ -1,8 +1,9 @@
 /*
- * Person detector: st_yololcv1_192 (ST model zoo, COCO person, int8) on TensorFlow Lite Micro + CMSIS-NN.
+ * Person detector: ST's YOLO-LC v1 (st_yololcv1, fine-tuned on event pictures; models/README.md) on TensorFlow Lite
+ * Micro + CMSIS-NN.
  *
- * Input:  192x192 RGB, uint8, row-major (r, g, b per pixel).
- * Output: 12x12 grid cells x 5 anchors x (x, y, w, h, objectness, person), float, as the raw YOLOv2 head.
+ * Input:  NxN RGB, uint8, row-major (r, g, b per pixel); N = PERSON_NN_INPUT_SIZE (160 in the demo, make NN_SIZE=).
+ * Output: N/16 x N/16 grid cells x 5 anchors x (x, y, w, h, objectness, person), float, as the raw YOLOv2 head.
  */
 #ifndef PERSON_NN_H
 #define PERSON_NN_H

@@ -1,5 +1,5 @@
 """Simulated GenX320 event pictures from ordinary video: a big training set from an artificial event camera, to be
-fine-tuned on a small recorded set afterwards (Amir, 2026-11-06).
+fine-tuned on a small recorded set afterwards.
 
 Video -> a fixed square crop per 10 s window, scaled to the 320x320 picture (people a set fraction of the view high,
 chosen as in tools/zoom_plan.py) -> grey, slight blur (lens), linear light (gamma 2.2) -> temporal upsampling to
@@ -7,8 +7,8 @@ chosen as in tools/zoom_plan.py) -> grey, slight blur (lens), linear light (gamm
 log intensity moves one contrast threshold away from the pixel's reference level (thresholds differ per pixel) ->
 50 ms pictures as the board makes them (128 nothing, 255 ON, 0 OFF, last event wins), with the sensor's event-rate
 limit (ERC: 500 kev/s, 25 k events per picture; above it events are dropped at random) and background noise.
-Contrast threshold, blur, light level, noise are drawn per crop from ranges (tools/evsim_calib.py fits them to the
-monitor recordings of the same videos).
+Contrast threshold, blur, light level, noise are drawn per crop from ranges, chosen by hand so that the statistics of
+tools/evsim_calib.py match the monitor recordings of the same video (MOT17-02 at 60 fps).
 
 Labels (YOLO, picture coordinates): class 0 = a person (MOT17 classes 1, 2, 7, conf 1, visibility >= 0.25) giving at
 least 20 events in its box; class 1 = a region to ignore (reflections, crowds, people in vehicles, people hardly
@@ -34,8 +34,7 @@ import zoom_plan  # noqa: E402
 
 PIC, WIN_S, SEG_S, MIN_EVENTS = 320, 0.05, 10.0, 20
 PERSON = (1, 2, 7)
-# per-crop parameter ranges (uniform); tools/evsim_calib.py prints the values that match the monitor recordings
-# fitted on the monitor recordings (MOT17-02 at 60 fps, 2026-11-06): inside the video 13.9 % of the pixels active, 17.5 %
+# per-crop parameter ranges (uniform), chosen with the statistics of tools/evsim_calib.py on the monitor recordings (MOT17-02 at 60 fps, 2026-11-06): inside the video 13.9 % of the pixels active, 17.5 %
 # of those isolated (noise-like), 53 % ON; the still black monitor around it 2.4-4.5 % active (noise in the dark);
 # the lit room ~1 %
 RANGES = {"C": (0.22, 0.38), "C_sigma": (0.02, 0.05), "blur": (0.6, 1.2), "gain": (0.3, 1.0),

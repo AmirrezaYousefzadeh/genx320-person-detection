@@ -4,6 +4,7 @@ The detector task prints one line per run:  D <board ms> <seq> <network ms> <n> 
 Each line is stored with the PC's receive time, as CSV: pc_time, board_ms, seq, nn_ms, n, boxes (json).
 Usage: det_log.py <out.csv> [seconds]   (default: until Ctrl-C). Run as `sg dialout -c "..."` if needed.
 """
+import os
 import csv
 import json
 import sys
@@ -13,7 +14,7 @@ import serial
 
 
 def main(out_csv, seconds=None):
-    port = serial.Serial("/dev/ttyACM0", 115200, timeout=1)
+    port = serial.Serial(os.environ.get("GENX_SERIAL", "/dev/ttyACM0"), 115200, timeout=1)
     time.sleep(0.3)  # lines queued before we opened the port are stale: drop them and the first partial line
     port.reset_input_buffer()
     port.readline()

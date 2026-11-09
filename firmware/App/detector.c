@@ -1,6 +1,6 @@
 /*
- * Detector task: collects events for DET_WINDOW_MS into the picture, stretches it to the network's 192x192
- * RGB input (the grey picture copied to all three channels), runs st_yololcv1_192 and decodes the boxes.
+ * Detector task: collects events for DET_WINDOW_MS into the picture, stretches it to the network's NxN RGB input
+ * (the grey picture copied to all three channels; N = 160 in the demo), runs the network and decodes the boxes.
  *
  * Copyright (c) 2026 Amirreza Yousefzadeh, University of Twente. Licensed under the Apache License 2.0.
  */
@@ -73,11 +73,10 @@ static det_result_t result;
 #define DET_COUNT_HEAD 0 /* off: on the monitor data the head is worse than counting boxes for 0..3 people */
 #endif
 #define DET_CAND_THRESHOLD 0.5f
-/* Counting the boxes (tools/room_sim.py: room recordings overlaid to 2 people, the board's logic replayed). With the
-   room-trained model (person_room_v7) on the room validation scenarios: threshold 0.7 with part removal, mirrored
-   pass, median 3: right for 0 / 1 / 2 people in 0.65 / 0.79 / 0.80 of the runs (v4 with the same logic: 0.72 / 0.51 /
-   0.60). The
-   threshold and whether part boxes are pruned first. make COUNT_THR=0.6 COUNT_PARTS=0 */
+/* Counting the boxes (tools/room_sim.py: room recordings overlaid to 2 people, the board's logic replayed): the
+   threshold for a box to count, and whether part boxes are pruned first (make COUNT_THR=0.6 COUNT_PARTS=0). With
+   the first room-trained model (person_room_v7, 192 px): threshold 0.7 with part removal, mirrored pass, median of
+   3 runs: right for 0 / 1 / 2 people in 0.65 / 0.79 / 0.80 of the runs (v4 with the same logic: 0.72 / 0.51 / 0.60). */
 #ifndef DET_COUNT_THRESHOLD
 #define DET_COUNT_THRESHOLD 0.7f
 #endif

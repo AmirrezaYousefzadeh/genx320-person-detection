@@ -5,18 +5,21 @@
 #   make NN_BENCH=1   also time the network on its test image at start-up (read with tools/nn_bench.py)
 #   make TEST_IMAGE=1 detect on the built-in test photo instead of the events (checks the box drawing)
 #   make ERC=500       event rate cap on the sensor in kevents/s (default 500, 0 = off)
-#   make THRESHOLD=0.7 detection score threshold (default 0.7)
-#   make NOFILTERS=1  sensor anti-flicker and STC filters off (default on in event mode); AFK=0/1 STC=0/1 one by one
+#   make THRESHOLD=0.7 detection score threshold for the raw boxes (default 0.7); COUNT_THR= the count's (0.5)
+#   make NOFILTERS=1  sensor filters off; AFK=0/1 (anti-flicker, default on) STC=1 STC_MS=10 (contrast filter, default
+#                     off: as configured it removes nearly all motion events, see the paper)
 #   make GATE=N       frame gate: skip the network below N active input pixels (150; 0 = off)
 #   make TEST_IMG=PersonDetection/test/evt_192x192.rgb   another built-in test picture (bench, TEST_IMAGE)
-#   make SPARSE_L1=1  event-driven first convolution (App/sparse_conv1.c) instead of TFLM's; needs <MODEL>_part_a2.tflite
+#   make SPARSE_L1=1  event-driven first convolution (App/sparse_conv1.c) instead of TFLM's; 192 px int8 models only:
+#                     make SPARSE_L1=1 MODEL=person_evt_v4_int8 NN_SIZE=192 HEAD_FLOAT=0 (needs <MODEL>_part_a2.tflite)
 #   make NN_SIZE=192  network input side (160 default); the MODEL must match (tools/resize_model.py, finetune.py --size)
 #   make RAW_BOXES=1  show the raw detections instead of the counted ones (see detector.c)
 #   make HEAD_FLOAT=0 the whole network in int8 (default 1: int8 body + float head, App/head_float.c;
 #                     MODEL = tools/headfloat.py's body, split; tools/build_hf.sh does all of it)
 #   make MIRROR=1     two network passes (picture + mirror image, averaged; default one, see detector.c)
-#   make COUNT_HEAD=0 count the boxes instead of using the counting head (see detector.c, count_head.c)
-#   make HISTO=1      sensor histogram mode: the sensor sends 320x320 count frames, no event decoding (build_histo/)
+#   make COUNT_HEAD=1 experimental counting head instead of counting the boxes (off by default; count_head.c)
+#   make HISTO=1      sensor histogram mode: the sensor sends 320x320 count frames, no event decoding (build_histo/;
+#                     flash it with make HISTO=1 flash ...)
 #   make MODEL=st_yololcv1_192_int8   build with ST's original COCO model instead of the fine-tuned one
 #   make ROT180=1     board clamped the other way up (picture and screen turned by 180 degrees)
 #   make DISPLAY_ROT180=1  only the screen turned (panel at the right)
@@ -132,6 +135,13 @@ MODEL    ?= person_room_v7_160_int8
 endif
 MODEL_A  := PersonDetection/models/$(MODEL)_part_a.tflite
 MODEL_B  := PersonDetection/models/$(MODEL)_part_b.tflite
+# the event-driven first layer: 192 px, whole network in int8 (App/sparse_conv1.c is written for 192x192 input)
+ifdef SPARSE_L1
+ifneq ($(NN_SIZE),192)
+$(error SPARSE_L1=1 needs NN_SIZE=192 (and HEAD_FLOAT=0 and a 192 px int8 MODEL with a _part_a2 file))
+endif
+DEFS     += -DSPARSE_L1=1
+endif
 # a float-head model brings its head weights: PersonDetection/models/<MODEL>_head.h (tools/headfloat.py, build_hf.sh)
 ifeq ($(HEAD_FLOAT),1)
 DEFS     += -DHEAD_WEIGHTS=$(MODEL)_head.h
@@ -144,7 +154,6 @@ COMMON   := $(MCU) $(DEFS) $(OPT) $(addprefix -I,$(INCDIRS)) -ffunction-sections
             --specs=nano.specs -MMD -MP
 CFLAGS   := $(COMMON) -std=gnu11
 ifdef SPARSE_L1
-DEFS     += -DSPARSE_L1=1
 MODEL_A2 := PersonDetection/models/$(MODEL)_part_a2.tflite
 endif
 ifdef TEST_IMG

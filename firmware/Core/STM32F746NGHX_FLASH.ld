@@ -218,7 +218,7 @@ SECTIONS
     . = ALIGN(32);
   } >SDRAM
 
-  /* Event recording buffer (tools/record.py): also not cached, so a debugger dump sees every word */
+  /* Event recording buffer (the microSD recorder, App/sdcard.c, tools/sdrec.py): also not cached, so a debugger dump sees every word */
   RecordSection (NOLOAD) :
   {
     . = ALIGN(32);

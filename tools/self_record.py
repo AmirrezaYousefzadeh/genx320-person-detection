@@ -71,7 +71,7 @@ class Board(threading.Thread):
 
     def __init__(self):
         super().__init__(daemon=True)
-        self.port = serial.Serial("/dev/ttyACM0", 115200, timeout=0.5)
+        self.port = serial.Serial(os.environ.get("GENX_SERIAL", "/dev/ttyACM0"), 115200, timeout=0.5)
         self.lock = threading.Lock()
         self.boxes, self.kevps, self.active, self.gated, self.nn_ms, self.t_boxes = [], 0, 0, 0, 0, 0.0
         self.log, self.log_file, self.runs, self.runs_with_person = None, None, 0, 0

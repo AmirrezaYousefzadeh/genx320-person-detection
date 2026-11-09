@@ -1,10 +1,11 @@
 /*
  * Person detector on TensorFlow Lite Micro + CMSIS-NN (see person_nn.h).
  *
- * The model is split in two (models/README.md) because its first layers need a 258 KiB tensor arena, which
- * only fits in SDRAM, while the rest needs about 110 KiB, which fits in fast internal SRAM:
- *   part A: 192x192x3 uint8 -> 48x48x32 int8, arena in SDRAM (own cacheable MPU region, MPU_Config() in main.c)
- *   part B: 48x48x32 int8 -> 12x12x30 float, arena in internal SRAM
+ * The model is split in two (models/README.md) because its first layers need a large tensor arena (measured with
+ * the float head: 253 KiB at 192 px, 176 KiB at 160 px), which only fits in SDRAM, while the rest needs 93-126 KiB,
+ * which fits in fast internal SRAM:
+ *   part A: NxNx3 uint8 -> N/4 x N/4 x 32 int8, arena in SDRAM (own cacheable MPU region, MPU_Config() in main.c)
+ *   part B: N/4 x N/4 x 32 int8 -> the head's input (float-head models) or N/16 x N/16 x 30 float, arena in SRAM
  * Both parts are in internal flash. Times are counted in CPU cycles with the DWT cycle counter.
  */
 #include "person_nn.h"

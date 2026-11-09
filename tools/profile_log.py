@@ -3,6 +3,7 @@
 Usage: profile_log.py SECONDS [label]     (serial /dev/ttyACM0, run with sg dialout -c)
 P <make_input us> <decode+smoothing us> <network ms> <total ms> <cpu %> <events %> <net %> <display %> <sd %>
 """
+import os
 import sys
 import time
 
@@ -10,7 +11,7 @@ import serial
 
 secs = float(sys.argv[1]) if len(sys.argv) > 1 else 10
 label = sys.argv[2] if len(sys.argv) > 2 else ""
-with serial.Serial("/dev/ttyACM0", 115200, timeout=0.5) as port:
+with serial.Serial(os.environ.get("GENX_SERIAL", "/dev/ttyACM0"), 115200, timeout=0.5) as port:
     port.reset_input_buffer()
     t0 = time.time()
     rows = []

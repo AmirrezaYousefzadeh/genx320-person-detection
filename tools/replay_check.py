@@ -4,6 +4,7 @@ Prints, per recording, how often the board showed the expected count. Run with t
 (`sg dialout -c "..."`) unless the shell has it.
 Usage: replay_check.py OUT.txt NO:FROM-TO=EXPECTED [NO:FROM-TO=EXPECTED ...]
 """
+import os
 import re
 import subprocess
 import sys
@@ -18,7 +19,7 @@ PY = str(ROOT / "work/venv/bin/python")
 
 
 def main(out, *items):
-    port = serial.Serial("/dev/ttyACM0", 115200, timeout=1)
+    port = serial.Serial(os.environ.get("GENX_SERIAL", "/dev/ttyACM0"), 115200, timeout=1)
     log = open(out, "w")
     summary = []
     for item in items:

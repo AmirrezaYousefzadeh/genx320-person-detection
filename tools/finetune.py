@@ -14,7 +14,9 @@ validation pictures, before and after fine-tuning, float and int8), log.txt.
 
 Usage: finetune.py --data work/dataset_v1[,work/dataset_v2,...] --model work/models_zoo/st_yololcv1_192.keras
                    --out work/finetune/v1 [--epochs 60] [--batch 32] [--lr 1e-4] [--val 09,11] [--patience 15]
-                   [--cpu] [--limit N]
+                   [--size 160] [--exclude KEYS] [--aug-scale 0.3] [--aug-shift 0.1] [--small drop|ignore]
+                   [--cpu] [--limit N]          (all options and their meaning: finetune.py --help)
+--size is read before anything else (it sets the grid of the loss), so it must be given on the command line.
 """
 import argparse
 import json
@@ -53,7 +55,7 @@ def list_samples(roots, val_seqs, min_h=MIN_PERSON_H, small="drop", exclude_seqs
     val_seqs: MOT17 numbers ("09") or parts of segment names ("pedro_val"); those segments are validation.
     Label lines are "class cx cy w h": class 0 a person, class 1 a region to ignore (a reflection, a crowd, a person
     hardly visible). A person smaller than min_h: small="drop" leaves the picture out (it would teach "no person"
-    on a person), small="ignore" keeps the picture and makes the person a region to ignore (Amir, 2026-11-06: tiny
+    on a person), small="ignore" keeps the picture and makes the person a region to ignore (tiny
     people only add noise). Pictures without people stay as negatives. Boxes are (class, cx, cy, w, h)."""
     train, val = [], []
     n_small = n_ign = 0

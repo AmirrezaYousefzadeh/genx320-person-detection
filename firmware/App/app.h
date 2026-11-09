@@ -144,7 +144,8 @@ void sensor_stc_start(uint32_t threshold_ms);  /* event mode: pass an event only
 #define SENSOR_AFK 1       /* anti-flicker filter, 50-520 Hz (make AFK=0) */
 #endif
 #ifndef SENSOR_STC
-#define SENSOR_STC 0       /* spatio-temporal contrast filter (make STC=1): off by default: a monitor bench cannot evaluate it */
+#define SENSOR_STC 0       /* spatio-temporal contrast filter (make STC=1): off by default; as configured it removes nearly
+                              all events of a moving person (room test, 2026-11-09), see the paper */
 #endif
 #ifndef STC_THRESHOLD_MS
 #define STC_THRESHOLD_MS 10 /* a pixel's event passes if the pixel fired within this time before (make STC_MS=) */

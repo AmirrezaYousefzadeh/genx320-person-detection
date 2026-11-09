@@ -1,7 +1,7 @@
 """Split a single-subgraph .tflite model in two after its first N operators, and check the parts on the PC.
 
-Why: the first layers of st_yololcv1_192 need a 258 KiB arena (too big for internal SRAM, so it lives in slow
-SDRAM), the rest needs about 110 KiB. With two models the firmware can give the second part a fast SRAM arena.
+Why: the first layers of st_yololcv1 need a large arena (measured on the board: 253 KiB at 192 px, 176 KiB at 160 px;
+too big for internal SRAM, so it lives in slow SDRAM), the rest needs 93-126 KiB. With two models the firmware can give the second part a fast SRAM arena.
 Each part keeps only its own tensors, buffers and operator codes; signatures and metadata are dropped (TFLM
 does not use them). The check runs both parts with the TFLite reference kernels on a test input and requires the
 same output as the full model, bit for bit.

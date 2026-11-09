@@ -1,7 +1,7 @@
 """A MOT-style sequence at 60 frames per second for the monitor (the Samsung refreshes at 59.95 Hz): every refresh shows
 a new picture, so the sensor sees motion in 16.7 ms steps instead of 33 ms (30 fps), 40 ms (25 fps) or 71 ms (14 fps)
 jumps. At 30 fps the event rate pulsed at the frame rate (45-52 % of its fluctuation power at 30 Hz; 68 % at 14 Hz for
-MOT17-05; under 1 % in the room), which the LCD showed as flicker (Amir, 2026-11-05).
+MOT17-05 on the first recordings; under 1 % in the room), which the LCD showed as flicker.
 
 Missing frames come from tools/interp_flow.py (DIS optical flow, both directions, occlusion-aware blend). Output frame
 k shows source position p = min(k * fps / 60, n - 1) (0-based source frames, n of them; round(n * 60 / fps) frames); the labels (gt/gt.txt) are interpolated linearly

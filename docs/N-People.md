@@ -19,8 +19,8 @@ Three subsets:
    walking, occlusion, empty room again), labelled from the motion; plus two- and three-person composites made by
    overlaying scenarios at the same moments (`composites/`, synthetic, with the overlay recipe).
 
-Size (version 1.0): 837 recorded segments of 10 s (2.4 h, 2.8 G events), 172 k pictures of 50 ms, 1.21 M labelled
-people, 15.8 GB of raw events (16.2 GB packaged). The exact per-pass numbers are in `dataset_stats.md` (made by `tools/dataset_stats.py`).
+Size (version 1.0): 837 recorded segments (10 s on the monitor, 20 s in the room; 2.4 h, 2.8 G events), 172 k
+pictures of 50 ms, 1.21 M labelled people, 15.8 GB of raw events (16.2 GB packaged). The exact per-pass numbers are in `dataset_stats.md` (made by `tools/dataset_stats.py`).
 
 ## How the labels were made
 
@@ -54,7 +54,8 @@ dataset_stats.md           the numbers per pass
 curation.tar               flags.json (segments with uncertain timing), align.csv (label offset, time shift and event
                            contrast per segment), teacher/ (RGB-teacher report, unlabelled detections per sequence)
 <subset>_<pass>.tar        one pass, e.g. MOT17_camp60_dark_z40_r0_g100.tar, PersonPath22_camp60pp_part1.tar,
-                           Room_real1.tar; unpack them all into one folder (tar -xf X.tar -C data/):
+                           Room_real1.tar; unpack them all into one folder (tar -xf X.tar -C data/; the
+                           code repository expects that folder to be its work/):
 
 dataset_<pass>/CONDITIONS.json         room light (webcam mean at a fixed exposure), monitor, options, calibration drift
 dataset_<pass>/<segment>/events.raw    Prophesee EVT2.0 RAW: 512-byte text header, then 32-bit words
