@@ -28,5 +28,5 @@ nn_test_image:
 #ifdef NN_TEST_IMAGE
     .incbin NN_TEST_IMAGE
 #else
-    .incbin "PersonDetection/test/skier_192x192.rgb"
+    .incbin "PersonDetection/test/room_192x192.rgb"
 #endif

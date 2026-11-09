@@ -3,7 +3,7 @@
 #   make              build build/person_detector.elf (+ size report)
 #   make flash        write it to the board with openocd
 #   make NN_BENCH=1   also time the network on its test image at start-up (read with tools/nn_bench.py)
-#   make TEST_IMAGE=1 detect on the built-in test photo instead of the events (checks the box drawing)
+#   make TEST_IMAGE=1 detect on the built-in test picture instead of the events (checks the box drawing)
 #   make ERC=500       event rate cap on the sensor in kevents/s (default 500, 0 = off)
 #   make THRESHOLD=0.7 detection score threshold for the raw boxes (default 0.7); COUNT_THR= the count's (0.5)
 #   make NOFILTERS=1  sensor filters off; AFK=0/1 (anti-flicker, default on) STC=1 STC_MS=10 (contrast filter, default
@@ -185,7 +185,7 @@ $(BUILD)/%.o: %.cc $(FLAGS_FILE)
 $(BUILD)/%.o: %.s $(FLAGS_FILE)
 	@mkdir -p $(dir $@)
 	$(CC) $(ASFLAGS) -c $< -o $@
-$(BUILD)/PersonDetection/Src/nn_data.o: $(MODEL_A) $(MODEL_B) $(MODEL_A2) PersonDetection/test/skier_192x192.rgb Makefile $(FLAGS_FILE)
+$(BUILD)/PersonDetection/Src/nn_data.o: $(MODEL_A) $(MODEL_B) $(MODEL_A2) PersonDetection/test/room_192x192.rgb Makefile $(FLAGS_FILE)
 
 $(BUILD)/$(TARGET).elf: $(OBJS) $(BUILD)/libtflm.a $(LDSCRIPT)
 	$(CXX) -o $@ $(OBJS) $(LDFLAGS) $(LIBS)

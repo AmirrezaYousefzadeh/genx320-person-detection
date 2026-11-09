@@ -62,6 +62,13 @@ make NN_BENCH=1 ...                                     # time the network at st
 freezes briefly); `tools/board_sleep.sh sleep|wake` switches the board (sensor, display) off and on without
 unplugging it. The tools that read the board's serial port use `/dev/ttyACM0` (set `GENX_SERIAL` otherwise).
 
+**Recording without a PC.** The bottom row of the panel is a record button: touch it, or press the blue USER button,
+to start recording the raw events to the microSD card, and again to stop (the detector keeps running). Each
+recording is `evt/recNNNN.raw` on the card (Prophesee EVT2.0 with a text header that states the sensor
+configuration) plus `recNNNN.txt` (board ticks, counters); the file is synced every 5 s, so a recording survives the
+power going off. On a USB power bank (ST-LINK port) the board records anywhere. Copy the files with a card reader,
+or over the debug link with `tools/sdrec.py read NO OUT.raw` (slow).
+
 ## Python environment
 
 The tools run from the repository root with a virtual environment in `work/venv` (Python 3.12) and keep their data
@@ -150,7 +157,7 @@ for the room light, and the board on `/dev/ttyACM0`.
 
 Our code (firmware application, network glue, tools): Apache License 2.0 (`LICENSE`). Third-party parts keep their
 own licences, listed in `NOTICE`: Prophesee's GenX320 driver (Apache 2.0), ST's HAL and board support (BSD-3-Clause),
-CMSIS and TensorFlow Lite Micro (Apache 2.0), FreeRTOS (MIT), FatFs, a font, one COCO photo. **Not open source:** the
+CMSIS and TensorFlow Lite Micro (Apache 2.0), FreeRTOS (MIT), FatFs, a font, two self-test event pictures from N-People. **Not open source:** the
 STM32CubeMX-generated files in `firmware/Core/` and every network (ST's YOLO-LC and the networks fine-tuned from it)
 are under ST's SLA0044, which allows their use only on STMicroelectronics devices. N-People: CC BY-NC-SA 4.0 (it
 derives from MOT17 and PersonPath22; do not use it to identify people).

@@ -7,6 +7,8 @@
  * cleared by DMA. Every frame the three rotate; the boxes of the last detection (with a "person 87%" tag) and,
  * while the card records, a blinking REC badge are drawn into the buffer just before it goes on the LCD. All
  * buffers are in SDRAM, which is device memory (not cached), so the LTDC and the DMA always see what the CPU wrote.
+ * The bottom row of the panel is a record button: a touch there, or the blue USER button, starts a recording to the
+ * microSD card and stops it again, so that the board can record on its own (on a power bank, without a PC).
  *
  * Copyright (c) 2026 Amirreza Yousefzadeh, University of Twente. Licensed under the Apache License 2.0.
  */
@@ -120,7 +122,9 @@ static void fill_circle(int cx, int cy, int r, uint16_t c) {
 #define Y_PEOPLE 58
 #define Y_EVENTS 136
 #define Y_NET 204
-#define Y_FOOT 257
+#define Y_BTN 249 /* the record button row, to the bottom of the panel */
+#define BTN_W 64
+#define BTN_H 21
 #define SPARK_N (PANEL_W - 2 * PX) /* event-rate history, one sample per panel update (~0.2 s): ~28 s */
 #define SPARK_H 18
 
@@ -219,30 +223,131 @@ static void draw_network(const det_result_t *r) {
   draw_text(x + 8, Y_NET + 18 + font_large.ascent - font_tiny.ascent, &font_tiny, kLabel, sub);
 }
 
-static void draw_footer(void) {
-  char line[40];
+/* A rectangle with its corners cut by one pixel, filled with c */
+static void round_rect(int x, int y, int w, int h, uint16_t c) {
+  fill_rect(x + 1, y, w - 2, h, c);
+  fill_rect(x, y + 1, w, h - 2, c);
+}
+
+/* The record button and the recorder's state next to it */
+static void draw_rec_row(void) {
+  char line[24];
   uint16_t c = kLabel;
-  if (sd_ctrl.state == SD_RECORDING) {
-    snprintf(line, sizeof(line), "REC %lu MB%s   cpu %lu%%", (unsigned long)(sd_ctrl.bytes >> 20),
-             sd_ctrl.dropped ? " !" : "", (unsigned long)cpu_busy_percent);
+  int rec = sd_ctrl.state == SD_RECORDING, nocard = sd_ctrl.state == SD_NOCARD;
+  fill_rect(0, Y_BTN, PANEL_W, LCD_H - Y_BTN, kPanelBg);
+  round_rect(PX, Y_BTN, BTN_W, BTN_H, rec ? kRec : (nocard ? kIdle : kDivider));
+  if (rec) {
+    fill_rect(PX + 10, Y_BTN + 6, 9, 9, kWhite); /* stop: a square */
+    draw_text(PX + 25, Y_BTN + 5, &font_label, kWhite, "STOP");
+  } else {
+    round_rect(PX + 1, Y_BTN + 1, BTN_W - 2, BTN_H - 2, kWhite);
+    fill_circle(PX + 14, Y_BTN + BTN_H / 2, 4, nocard ? kIdle : kRec); /* record: a red dot */
+    draw_text(PX + 25, Y_BTN + 5, &font_label, nocard ? kIdle : kValue, nocard ? "NO SD" : "REC");
+  }
+  if (rec) {
+    uint32_t s = (HAL_GetTick() - sd_ctrl.start_tick) / 1000;
+    snprintf(line, sizeof(line), "%lu:%02lu %luM%s", (unsigned long)(s / 60), (unsigned long)(s % 60),
+             (unsigned long)(sd_ctrl.bytes >> 20), sd_ctrl.dropped ? "!" : "");
     c = kRec;
   } else if (sd_ctrl.state == SD_PLAYING) {
-    snprintf(line, sizeof(line), "REPLAY   cpu %lu%%", (unsigned long)cpu_busy_percent);
+    snprintf(line, sizeof(line), "replay");
   } else if (sd_ctrl.state == SD_ERROR) {
-    snprintf(line, sizeof(line), "card error   cpu %lu%%", (unsigned long)cpu_busy_percent);
+    snprintf(line, sizeof(line), "card error");
     c = kRec;
   } else {
-    snprintf(line, sizeof(line), "processor %lu%% busy%s", (unsigned long)cpu_busy_percent, ev_overruns ? "  !" : "");
+    snprintf(line, sizeof(line), "cpu %lu%%%s", (unsigned long)cpu_busy_percent, ev_overruns ? " !" : "");
   }
-  fill_rect(0, Y_FOOT, PANEL_W, font_tiny.height, kPanelBg);
-  draw_text(PX, Y_FOOT, &font_tiny, c, line);
+  draw_text(PX + BTN_W + 7, Y_BTN + 5, &font_tiny, c, line);
+}
+
+/* ---- record button input: a touch on the bottom of the panel or the blue USER button (B1, PI11) -------------
+   The touch controller (FT5336 on I2C3, the bus CubeMX set up for it) is polled; its X axis is the LCD's y. A
+   press toggles the recorder (sdcard.c, the same commands the PC sends over SWD), at most once a second. */
+extern I2C_HandleTypeDef hi2c3;
+#define TS_ADDR 0x70 /* FT5336 */
+#define REC_LOCKOUT_MS 1000
+
+/* For a test over SWD: touches seen, the last one's panel coordinates, failed reads in a row */
+volatile uint32_t touch_count, touch_errors;
+volatile int touch_x = -1, touch_y = -1;
+
+static void short_delay(void) {
+  for (volatile int i = 0; i < 400; i++) {
+  }
+}
+
+/* Free the touch bus and reset I2C3: a read cut short (a reset of the processor, an error) can leave the touch
+   controller holding SDA low; up to nine clock pulses and a STOP release it, then I2C3 gets its pins back. */
+static void touch_bus_recover(void) {
+  GPIO_InitTypeDef g = {GPIO_PIN_7 | GPIO_PIN_8, GPIO_MODE_OUTPUT_OD, GPIO_PULLUP, GPIO_SPEED_FREQ_LOW, 0};
+  __HAL_I2C_DISABLE(&hi2c3);
+  HAL_GPIO_WritePin(GPIOH, GPIO_PIN_7 | GPIO_PIN_8, GPIO_PIN_SET);
+  HAL_GPIO_Init(GPIOH, &g); /* PH7 = SCL, PH8 = SDA */
+  for (int i = 0; i < 9 && HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_8) == GPIO_PIN_RESET; i++) {
+    HAL_GPIO_WritePin(GPIOH, GPIO_PIN_7, GPIO_PIN_RESET), short_delay();
+    HAL_GPIO_WritePin(GPIOH, GPIO_PIN_7, GPIO_PIN_SET), short_delay();
+  }
+  HAL_GPIO_WritePin(GPIOH, GPIO_PIN_8, GPIO_PIN_RESET), short_delay(); /* STOP: SDA rises while SCL is high */
+  HAL_GPIO_WritePin(GPIOH, GPIO_PIN_8, GPIO_PIN_SET), short_delay();
+  g.Mode = GPIO_MODE_AF_OD, g.Speed = GPIO_SPEED_FREQ_VERY_HIGH, g.Alternate = GPIO_AF4_I2C3;
+  HAL_GPIO_Init(GPIOH, &g);
+  __HAL_I2C_ENABLE(&hi2c3);
+  hi2c3.State = HAL_I2C_STATE_READY;
+}
+
+static int touch_point(int *x, int *y) {
+  static uint32_t calls;
+  uint8_t b[5]; /* TD_STATUS, P1_XH, P1_XL, P1_YH, P1_YL */
+  if (calls++ == 0) touch_bus_recover();
+  if (touch_errors >= 5 && calls % 64) return 0; /* no answer: try again every few seconds */
+  /* No task switch during the read: a pre-emption by the event task would run the HAL into its timeout in the
+     middle of a transfer and leave the bus busy. The read takes about 0.7 ms. */
+  vTaskSuspendAll();
+  HAL_StatusTypeDef st = HAL_I2C_Mem_Read(&hi2c3, TS_ADDR, 0x02, I2C_MEMADD_SIZE_8BIT, b, sizeof(b), 5);
+  xTaskResumeAll();
+  if (st != HAL_OK) {
+    touch_errors++;
+    touch_bus_recover();
+    return 0;
+  }
+  touch_errors = 0;
+  int n = b[0] & 0x0F;
+  if (n < 1 || n > 5) return 0;
+  *y = ((b[1] & 0x0F) << 8) | b[2];
+  *x = ((b[3] & 0x0F) << 8) | b[4];
+#if VIEW_ROT180
+  *x = LCD_W - 1 - *x, *y = LCD_H - 1 - *y;
+#endif
+  touch_count++, touch_x = *x, touch_y = *y;
+  return 1;
+}
+
+static void rec_toggle(void) {
+  if (sd_ctrl.cmd != SD_CMD_NONE) return; /* a command (from the PC or a press) is still being served */
+  if (sd_ctrl.state == SD_RECORDING)
+    sd_ctrl.cmd = SD_CMD_STOP;
+  else if (sd_ctrl.state != SD_BUSY && sd_ctrl.state != SD_PLAYING)
+    sd_ctrl.cmd = SD_CMD_START; /* from idle, done, no card or error: the recorder mounts the card again */
+}
+
+static void rec_input(void) {
+  static int was_down = 1; /* a finger or the button already down at start-up does not count */
+  static uint32_t last;
+  int x, y;
+  int down = HAL_GPIO_ReadPin(GPIOI, GPIO_PIN_11) == GPIO_PIN_SET ||
+             (touch_point(&x, &y) && x < PANEL_W && y >= Y_BTN - 8);
+  if (down && !was_down && HAL_GetTick() - last >= REC_LOCKOUT_MS) {
+    rec_toggle();
+    last = HAL_GetTick();
+  }
+  was_down = down;
 }
 
 static void draw_panel(const det_result_t *r) {
   draw_people((int)r->count);
   draw_events(ev_rate_kevps);
   draw_network(r);
-  draw_footer();
+  draw_rec_row();
 }
 
 /* ---- event view (viewer coordinates: column X of the picture, row Y - VIEW_CROP; VIEW_ROT180 turns them) --- */
@@ -272,7 +377,8 @@ static int overlaps(const rect_t *a, const rect_t *b) {
 
 /* The boxes of one detection: a fresh detection gets a 2 px frame and a "person 87%" tag (above the box, or
    inside its top when there is no room above; shortened to "87%" or left out where it would cover another
-   tag), a box the tracker still holds after its person was last seen gets a thin frame and no tag. */
+   tag); a box held over from an earlier run (only with DET_COUNT_RUNS > 1, see detector.c) gets a thin frame and
+   no tag. */
 static void draw_boxes(uint8_t *fb, const det_result_t *r) {
   rect_t tags[DET_MAX_BOXES];
   int n_tags = 0;
@@ -361,6 +467,8 @@ void display_task(void *argument) {
   memset(ev_fb, EV_BG, sizeof(ev_fb));
   draw_panel_static();
   config_layers();
+  GPIO_InitTypeDef button = {GPIO_PIN_11, GPIO_MODE_INPUT, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW, 0};
+  HAL_GPIO_Init(GPIOI, &button); /* the blue USER button: high while pressed (pull-down on the board) */
 
   uint8_t *write = ev_fb[0], *shown = ev_fb[1], *spare = ev_fb[2];
   events_set_write_buffer(write);
@@ -389,6 +497,7 @@ void display_task(void *argument) {
 #endif
 
     if (frame % 32 == 0) cpu_load_update(); /* about once a second */
+    if (frame % 4 == 0) rec_input();        /* about every 0.1 s */
     if (frame % 8 == 0) draw_panel(&r);
     vTaskDelay(pdMS_TO_TICKS(12));
   }

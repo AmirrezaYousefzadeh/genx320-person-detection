@@ -239,7 +239,7 @@ void detector_task(void *argument) {
 #endif
     uint32_t t1 = HAL_GetTick();
     int gated = DET_GATE_ACTIVE > 0 && active < DET_GATE_ACTIVE; /* nothing moves: skip the network */
-#ifdef DET_TEST_IMAGE /* make TEST_IMAGE=1: detect on the built-in skier photo instead, to check the box drawing */
+#ifdef DET_TEST_IMAGE /* make TEST_IMAGE=1: detect on the built-in test picture instead, to check the box drawing */
     extern const uint8_t nn_test_image[];
     gated = 0;
     r.status = person_nn_run(nn_test_image, nn_output);

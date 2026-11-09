@@ -28,7 +28,7 @@ def main(elf, body, head, size, test=None):
     print(f"status {status}; per network run (int8 body + float head): " + ", ".join(f"{r:.1f} ms" for r in runs)
           + f"; arena A {arena[0] / 1024:.0f} KiB, B {arena[1] / 1024:.0f} KiB")
     # the same input bytes on the PC: the first size*size*3 bytes of the built-in test image
-    img = np.fromfile(test or ROOT / "firmware/PersonDetection/test/skier_192x192.rgb", np.uint8)[:size * size * 3]
+    img = np.fromfile(test or ROOT / "firmware/PersonDetection/test/room_192x192.rgb", np.uint8)[:size * size * 3]
     from ai_edge_litert.interpreter import Interpreter, OpResolverType
     it = Interpreter(body, experimental_op_resolver_type=OpResolverType.BUILTIN_REF)
     it.allocate_tensors()

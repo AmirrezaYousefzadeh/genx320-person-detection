@@ -4,7 +4,9 @@
  * The event task pushes every chunk it takes from the DMA ring into the 3.5 MB SDRAM ring (sd_push); this
  * task drains the ring to the open file in 32 KB pieces. Recordings are /evt/recNNNN.raw (Prophesee EVT2 RAW:
  * a 512-byte text header, then the words as they came from the sensor) plus recNNNN.txt with the board
- * ticks and counters. Commands come from the PC over SWD (tools/sdrec.py writes sd_ctrl.cmd); LIST and READ
+ * ticks and counters. Commands come from the PC over SWD (tools/sdrec.py writes sd_ctrl.cmd) or from the record
+ * button on the screen (display.c: START and STOP); while recording, the file is synced every few seconds so that
+ * a recording on a battery survives the power going off. LIST and READ
  * leave their result in the SDRAM ring for the PC to dump. Copyright (c) 2026 Amirreza Yousefzadeh,
  * University of Twente. Licensed under the Apache License 2.0.
  */
@@ -16,6 +18,7 @@
 #include "stm32746g_discovery_sd.h"
 
 #define CHUNK_WORDS 8192 /* 32 KB per f_write, a multiple of the ring and of a sector */
+#define SYNC_MS 5000     /* f_sync of the open recording at most this often (directory entry and FAT up to date) */
 #define HEADER_BYTES 512
 #define DIR_NAME "evt"
 
@@ -29,7 +32,7 @@ __attribute__((used)) sd_ctrl_t sd_ctrl = {SD_MAGIC, 0, SD_NOCARD, 0, 0, 0, 0, 0
 
 static volatile uint32_t head = 0, tail = 0; /* word indices into record_buf */
 static volatile uint32_t recording = 0;
-static uint32_t words_total = 0;
+static uint32_t words_total = 0, last_sync = 0;
 
 static inline uint32_t used(void) { return (head + REC_WORDS - tail) % REC_WORDS; }
 
@@ -95,6 +98,7 @@ static FRESULT start_recording(void) {
   sd_ctrl.start_tick = HAL_GetTick();
   sd_ctrl.stop_tick = 0;
   words_total = 0;
+  last_sync = HAL_GetTick();
   if ((r = write_header()) != FR_OK) return r;
   recording = 1;
   return FR_OK;
@@ -311,6 +315,10 @@ void sd_task(void *argument) {
     if (recording) {
       if (used() >= CHUNK_WORDS) {
         FRESULT r = write_words(CHUNK_WORDS);
+        if (r == FR_OK && HAL_GetTick() - last_sync >= SYNC_MS) {
+          r = f_sync(&file);
+          last_sync = HAL_GetTick();
+        }
         if (r != FR_OK) {
           sd_ctrl.result = r;
           stop_recording();

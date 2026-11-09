@@ -40,6 +40,7 @@ STMicroelectronics devices.
   firmware/App/font.c                    Bitmap fonts rendered from DejaVu Sans. Copyright (c) 2003
                                          Bitstream, Inc.; DejaVu changes public domain. Bitstream Vera
                                          licence, see firmware/App/FONT-LICENSE.
-  firmware/PersonDetection/test/         One COCO val2017 photo (a Flickr photo under the Creative Commons
-                                         licence of its photographer, see cocodataset.org/#termsofuse),
-                                         used only as a built-in self-test of the network.
+  firmware/PersonDetection/test/         Two event pictures from N-People, used only as a built-in self-test
+                                         of the network: room_192x192.rgb from the authors' own room
+                                         recordings; evt_192x192.rgb of a MOT17 sequence replayed on the
+                                         monitor (CC BY-NC-SA 4.0; MOT17 is CC BY-NC-SA 3.0).
