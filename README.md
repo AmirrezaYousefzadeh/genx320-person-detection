@@ -83,15 +83,16 @@ work/venv/bin/pip install -r requirements.txt
 
 ## Using N-People
 
-Download the record's files (`<subset>_<pass>.tar`, `curation.tar`, `splits.json`, ...) into one folder and unpack
-the tar files into `work/` (each holds `dataset_<pass>/<segment>/`):
+Download `N-People-v1.0.zip` from the 4TU record, unzip it anywhere and link its pass folders
+(`N-People/<MOT17|PersonPath22|Room>/dataset_<pass>/`) into `work/`:
 
 ```
-for f in /path/to/N-People/*.tar; do tar -xf "$f" -C work/; done
+unzip N-People-v1.0.zip -d /path/to/data
+for d in /path/to/data/N-People/*/dataset_*; do ln -s "$d" work/; done
 ```
 
 A segment holds the raw events (`events.raw`, Prophesee EVT2.0), the monitor log, the calibration and the labels;
-`splits.json` names the test and training segments. The 50 ms pictures are not in the record:
+`N-People/splits.json` names the test and training segments. The 50 ms pictures are not in the record:
 `tools/record_dataset.py label <segment>` (or `tools/relabel_list.sh LIST`, a file with one segment per line) makes
 them from the events and writes the labels again from the source annotations, so it needs the source sequences
 (next section). The room recordings (`dataset_real1`) are labelled from the motion (`tools/real_label.py label`);
