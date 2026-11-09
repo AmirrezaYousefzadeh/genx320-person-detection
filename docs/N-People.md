@@ -80,11 +80,12 @@ writes the labels again from the source annotations, also with other window leng
 
 `tools/eval_ap.py`: AP50 and AP50:95 (COCO style, 101-point) on the 50 ms pictures; class-1 regions and people below
 12 % of the height are ignored. Report the test sets separately: MOT17 full view (source fps), MOT17 zoomed (source fps),
-MOT17 zoomed 60 fps (dark and lit), PersonPath22 test windows, room. The paper's numbers (160 px YOLO-LC, int8 body +
-float head): 0.34 / 0.30 / 0.27 / 0.08 / 0.89 AP50 for the deployed network, 0.32 / 0.40 / 0.35 / 0.16 / 0.85 for the
-one trained on everything (bootstrap deviation over segments 0.04-0.06 on the MOT17 sets, 0.01-0.02 on PersonPath22). Nothing in the test sets was used for
-training; the stopping epoch of each fine-tuning run was chosen on the validation loss of these held-out segments (the
-paper says so), and the room scenarios were used to choose the counting threshold.
+MOT17 zoomed 60 fps (dark and lit), PersonPath22 test windows. The room scenarios are held out too, but one person in
+one room is too small a sample for a meaningful accuracy figure. The paper's numbers (160 px YOLO-LC, int8 body +
+float head): 0.34 / 0.30 / 0.27 / 0.08 AP50 for the deployed network, 0.32 / 0.40 / 0.35 / 0.16 for the one trained
+on everything (bootstrap deviation over segments 0.04-0.06 on the MOT17 sets, 0.01-0.02 on PersonPath22). Nothing in
+the test sets was used for training; the stopping epoch of each fine-tuning run was chosen on the validation loss of
+these held-out segments (the paper says so).
 
 ## What a monitor cannot measure (please read before using the data for temporal methods)
 

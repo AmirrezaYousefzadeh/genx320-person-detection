@@ -83,7 +83,6 @@ def fig_pareto(timings=None):
         ax.annotate(f"{size} px", (t["hf_ms"], hf), textcoords="offset points", xytext=(4, 4), fontsize=7, color=INK)
     ax.plot(xi, yi, "o-", color=ORANGE, lw=1.2, ms=4, label="int8", mfc="white")
     ax.plot(xs, ys, "o-", color=BLUE, lw=1.2, ms=4, label="int8 body + float head")
-    ax.plot([422], [0.75], "s", color=AQUA, ms=5, label="BSc thesis 2025, int8, same board")
     ax.set_xlabel("network time on the STM32F746 (ms)")
     ax.set_ylabel("AP50 on PEDRo")
     ax.grid(color="#e4e4e0", lw=0.5)

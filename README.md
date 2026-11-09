@@ -4,11 +4,9 @@ Code, firmware and tools of the paper *"Live Person Detection from an Event Came
 Dataset, In-Sensor Preprocessing, and Where the Cycles Go"*, and of the **N-People** dataset recorded with it.
 
 <p align="center">
-  <img src="docs/demo_board.jpg" alt="GenX320 starter kit on an STM32F746G-DISCO with a person box, the people count, the event rate and the network time on its display" height="400">
-  &nbsp;
   <img src="docs/demo.gif" alt="The board running live: boxes follow the people walking in front of the sensor, the count and the network time update about twice a second" height="400">
-  <br><em>The demonstrator, and the board running live (right; full-quality video: <a href="docs/demo.mp4">docs/demo.mp4</a>).
-  The board finds the people, counts them and shows the event rate and the network time on its own display.</em>
+  <br><em>The board running live (full-quality video: <a href="docs/demo.mp4">docs/demo.mp4</a>). It finds the people,
+  counts them and shows the event rate and the network time on its own display.</em>
 </p>
 
 A Prophesee **GenX320** event camera (320x320) on an **STM32F746G-DISCO** board (Cortex-M7 at 216 MHz, 320 KB SRAM,
@@ -17,8 +15,7 @@ A Prophesee **GenX320** event camera (320x320) on an **STM32F746G-DISCO** board 
 own display. No PC in the loop.
 
 - **Accuracy of the demo's network** (160 px, int8 body + float head; PC evaluation of the files that run on the
-  board): 0.89 AP50 on the held-out room recordings, 0.27-0.34 on held-out MOT17 replays, 0.08 on PersonPath22
-  replays. The same architecture fine-tuned on the public PEDRo benchmark instead reaches 0.70 AP50 there at 160 px
+  board): 0.27-0.34 AP50 on held-out MOT17 replays, 0.08 on PersonPath22 replays. The same architecture fine-tuned on the public PEDRo benchmark instead reaches 0.70 AP50 there at 160 px
   and 0.75 at 192 px (`models/paper/`).
 - **Speed:** 360 ms per network run at 160 px on a stored picture; live in an office 378 ms (median; 410 ms at the
   90th percentile) with the event decoding running, an update every 0.44 s (2.3 per second).
@@ -138,9 +135,9 @@ table), `resize_model.py` (128/160/192/224 px), `headfloat.py` (int8 body + floa
 (AP50, AP50:95, bootstrap over segments, all test sets), `eval_run.sh`, `yolo_ref.py` and `evpic.py` (the board's
 input on the PC).
 
-**Board measurements** (Sec. V-B to V-D): `nn_bench.py`, `bench_hf.py` and `board_session.sh` (network time,
-board output against the PC), `replay_check.py` (counts of replayed recordings), `room_sim.py` (counting bench with
-two and three people), `profile_log.py` (where the cycles go), `sparse_conv1.py` (the event-driven first layer's
+**Board measurements** (Sec. V-B, V-C): `nn_bench.py`, `bench_hf.py` and `board_session.sh` (network time,
+board output against the PC), `replay_check.py` (counts of replayed recordings), `room_sim.py` (a counting bench with
+two and three people overlaid from the room recordings; not in the paper), `profile_log.py` (where the cycles go), `sparse_conv1.py` (the event-driven first layer's
 constants, bit-exact check), `act_sparsity.py` (activation sparsity), `bench_mot.py` and `det_log.py` (live
 precision/recall on the monitor), `peek.py`, `power_estimate.py` (indicative power from the STM32F746 datasheet).
 
