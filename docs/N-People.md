@@ -87,9 +87,11 @@ paper says so), and the room scenarios were used to choose the counting threshol
 
 ## What a monitor cannot measure (please read before using the data for temporal methods)
 
-A monitor shows frames: even at 60 fps an edge moves in 16.7 ms steps and gives one event per pixel per step, where a
-real edge gives a burst within a millisecond. Sensor-side temporal filters (STC) and temporal representations see the
-replay differently from real motion; the dataset evaluates networks and spatial representations. At the source frame
+A monitor shows frames: even at 60 fps an edge moves in 16.7 ms steps. This changes the time structure of the events
+somewhat: in the 60 fps replays 28-31 % of the events follow an event of the same pixel within 10 ms, against 36-60 %
+for a person in the room (9-10 % and 10-26 % within 1 ms). Sensor-side temporal filters (STC) and temporal
+representations therefore see the replay a little differently from real motion; the dataset evaluates networks and
+spatial representations best. At the source frame
 rate the event rate pulses at the frame rate (46 % of its fluctuation power at 14 Hz for a 14 fps video, 52 % at 30 Hz
 for 30 fps); at 60 fps the pulsing moves to the refresh rate and the picture-to-picture density change falls from 9–19 %
 to 3–6 % (a real person: 3 %). The monitor's noise (~0.7 events per pixel per second on a still grey screen) and
