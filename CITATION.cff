@@ -6,7 +6,7 @@ authors:
     given-names: Amirreza
     affiliation: "University of Twente, CAES"
     email: a.yousefzadeh@utwente.nl
-repository-code: "https://github.com/AmirrezaYousefzadeh/genx320-person-detection"
+repository-code: "https://github.com/cognimachina/genx320-person-detection"
 license: Apache-2.0
 version: 1.0.0
 date-released: 2026-11-07

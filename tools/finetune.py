@@ -50,6 +50,15 @@ AUG = (0.0, 0.0)  # --aug-scale, --aug-shift (set in main)
 MIN_H_AUG = 0.0  # a person shrunk below this by the augmentation becomes a region to ignore (= --min-h with --small ignore)
 
 
+def timing_uncertain(seg):
+    """a monitor segment whose labels are timed only by the START command (no marker fit, no clear motion fit:
+    +-0.5 s or worse); N-People keeps it out of training and testing (curation/flags.json)"""
+    ej = Path(seg) / "events.json"
+    if not ej.exists():
+        return False
+    return json.loads(ej.read_text()).get("sync", {}).get("method", "").startswith("start command")
+
+
 def list_samples(roots, val_seqs, min_h=MIN_PERSON_H, small="drop", exclude_seqs=()):
     """roots: one directory or several separated by commas (e.g. work/dataset_v1,work/dataset_v2).
     val_seqs: MOT17 numbers ("09") or parts of segment names ("pedro_val"); those segments are validation.
@@ -64,6 +73,8 @@ def list_samples(roots, val_seqs, min_h=MIN_PERSON_H, small="drop", exclude_seqs
     ex_keys = [f"MOT17-{s}-" if s.isdigit() else s for s in exclude_seqs if s]
     for seg in segs:
         if any(k in seg.name for k in ex_keys):  # neither training nor validation (the test segments)
+            continue
+        if timing_uncertain(seg):  # labels not timed by a marker or the motion (since 2026-11-09)
             continue
         is_val = any(k in seg.name for k in keys)
         for png in sorted((seg / "pictures").glob("pic_*.png")):

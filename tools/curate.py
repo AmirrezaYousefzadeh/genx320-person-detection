@@ -26,7 +26,15 @@ OUT = ROOT / "work/curation"
 
 
 def segments(roots):
-    return sorted(s for r in roots.split(",") for s in Path(r).resolve().glob("*_f*") if (s / "labels").is_dir())
+    # absolute, not resolved: pass folders linked into work/ (the dataset README's setup) keep their work/ path
+    return sorted(s for r in roots.split(",") for s in Path(r).absolute().glob("*_f*") if (s / "labels").is_dir())
+
+
+def rel(p):
+    try:
+        return str(p.relative_to(ROOT))
+    except ValueError:
+        return str(p)
 
 
 def read_labels(txt, min_h=0.12):
@@ -86,7 +94,7 @@ def align(roots):
             flag.append(f"contrast {contrast:.2f}")
         if "marker" not in sync:
             flag.append("no marker sync")
-        rows.append({"segment": str(seg.relative_to(ROOT)), "density": round(base, 4), "contrast": round(contrast, 2),
+        rows.append({"segment": rel(seg), "density": round(base, 4), "contrast": round(contrast, 2),
                      "best_dx": best[1], "best_dy": best[2], "best_dt": bt[1], "sync": sync, "flags": "; ".join(flag)})
     out = OUT / "align.csv"
     with open(out, "w", newline="") as f:
@@ -122,7 +130,7 @@ def suspects(roots, model):
                 ma = iou_matrix(b, allgt)
                 extra = int(sum(1 for k in range(len(b)) if s[k] >= 0.7 and not (len(allgt) and (ma[k] >= 0.2).any())))
                 if missed or extra:
-                    rows.append({"picture": str(p.relative_to(ROOT)), "labelled": len(gt), "unseen_labels": missed,
+                    rows.append({"picture": rel(p), "labelled": len(gt), "unseen_labels": missed,
                                  "unlabelled_detections": extra})
     out = OUT / f"suspects_{Path(roots.split(',')[0]).name}.csv"
     with open(out, "w", newline="") as f:

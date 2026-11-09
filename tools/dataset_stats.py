@@ -9,6 +9,7 @@ from collections import OrderedDict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).parent))
 W = ROOT / "work"
 
 GROUPS = OrderedDict([
@@ -26,7 +27,6 @@ GROUPS = OrderedDict([
 ])
 DERIVED = OrderedDict([
     ("Room composites (2-3 people, derived from real1)", ["dataset_real1_comp"]),
-    ("Close-up crops of v1-v3 (derived)", ["dataset_zoom"]),
 ])
 
 
@@ -44,7 +44,11 @@ def seg_stats(seg, include_card):
             people = sum(1 for p in pics if (seg / "labels" / (p.stem + ".txt")).exists()
                          for line in (seg / "labels" / (p.stem + ".txt")).read_text().splitlines() if line.startswith("0 "))
             raw = seg / "events.raw"
-            return {"segments": 1, "pictures": len(pics), "people": people, "boxes_all": people, "events": 0,
+            n_ev = 0
+            if raw.exists():  # no events.json: count the CD events of the RAW file
+                from evt2 import decode, read_raw
+                n_ev = len(decode(read_raw(raw)[1])["t"])
+            return {"segments": 1, "pictures": len(pics), "people": people, "boxes_all": people, "events": n_ev,
                     "bytes": raw.stat().st_size if raw.exists() else 0, "seconds": len(pics) * 0.05, "video": seg.name}
         if include_card and (seg / "segment.json").exists():
             return {"segments": 1, "on_card": 1}
@@ -61,7 +65,7 @@ def seg_stats(seg, include_card):
     src = json.loads((seg / "segment.json").read_text()) if (seg / "segment.json").exists() else {}
     video = Path(str(src.get("seq_dir", src.get("scenario", seg.name)))).name
     return {"segments": 1, "pictures": len(pics) or ev.get("pictures", 0), "people": people,
-            "boxes_all": ev.get("boxes_all", 0), "events": ev.get("events", 0),
+            "boxes_all": ev.get("boxes_all", 0), "events": ev.get("events", 0), "histo": ev.get("mode") == "histogram",
             "bytes": raw.stat().st_size if raw.exists() else 0, "seconds": ev.get("duration_s", 0.0), "video": video}
 
 
@@ -69,6 +73,8 @@ def add(tot, s):
     for k, v in s.items():
         if k == "video":
             tot.setdefault("videos", set()).add(v)
+        elif k == "histo":
+            tot["histo"] = tot.get("histo", False) or v
         else:
             tot[k] = tot.get(k, 0) + v
 
@@ -76,7 +82,7 @@ def add(tot, s):
 def main():
     include_card = "--include-card" in sys.argv
     out = OrderedDict()
-    grand = {}
+    grand, all_videos = {}, set()
     for name, spec in list(GROUPS.items()) + list(DERIVED.items()):
         tot = {}
         ps = passes(spec)
@@ -88,11 +94,12 @@ def main():
         if not tot:
             continue
         tot["passes"] = len(ps)
+        if name in GROUPS:
+            add(grand, {k: v for k, v in tot.items() if k not in ("videos", "histo")})
+            all_videos.update(tot.get("videos", ()))
         tot["videos"] = len(tot.get("videos", ()))
         out[name] = tot
-        if name in GROUPS:
-            add(grand, {k: v for k, v in tot.items() if k not in ("videos", "passes")})
-    grand.pop("video", None)
+    grand["videos"] = len(all_videos)  # distinct source videos and room scenarios
     out["TOTAL (real recordings)"] = grand
     (ROOT / "work/results").mkdir(exist_ok=True)
     (ROOT / "work/results/dataset_stats.json").write_text(json.dumps(out, indent=1))
@@ -101,7 +108,12 @@ def main():
     for name, t in out.items():
         md.append(f"| {name} | " + " | ".join(
             f"{t.get(c, 0) / 1e9:.2f} GB" if c == "bytes" else f"{t.get(c, 0) / 60:.1f} min" if c == "seconds"
-            else f"{t.get(c, 0):,}" if c != "events" else f"{t.get(c, 0) / 1e6:.0f} M" for c in cols) + " |")
+            else f"{t.get(c, 0):,}" if c != "events" else "frames" if t.get("histo") else f"{t.get(c, 0) / 1e6:.0f} M"
+            for c in cols) + " |")
+    md.append("")
+    md.append("people: labelled boxes (monitor: at least 20 active pixels inside; room: from the motion, at least 300); boxes_all: every mapped box. Histogram passes "
+              "(h1) record the sensor's count frames, not events (one picture per frame, ~120 ms apart). The total counts "
+              "the recorded segments (the composites are derived from the room recordings).")
     (ROOT / "work/results/dataset_stats.md").write_text("\n".join(md) + "\n")
     print("\n".join(md))
 

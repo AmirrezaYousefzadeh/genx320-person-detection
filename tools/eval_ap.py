@@ -26,11 +26,22 @@ import evpic  # noqa: E402
 N_ANCHORS = 5
 
 
+def timing_uncertain(seg):
+    """a monitor segment whose labels are timed only by the START command (no marker fit, no clear motion fit:
+    +-0.5 s or worse); N-People keeps it out of training and testing (curation/flags.json)"""
+    ej = Path(seg) / "events.json"
+    if not ej.exists():
+        return False
+    return json.loads(ej.read_text()).get("sync", {}).get("method", "").startswith("start command")
+
+
 def samples(roots, select, stride, min_h):
     keys = [f"MOT17-{s}-" if s.isdigit() else s for s in select if s]
     out = []
     for seg in sorted(seg for root in roots for seg in Path(root).glob("*_f*")):
         if keys and not any(k in seg.name for k in keys):
+            continue
+        if timing_uncertain(seg):
             continue
         for png in sorted((seg / "pictures").glob("pic_*.png"))[::stride]:
             gt, ign = [], []

@@ -7,7 +7,11 @@
   fetch OUT_SEGMENT_DIR
         copy the segment's recording from the card over SWD into events.raw (slow, ~100 kB/s; or copy the
         card's /evt/recNNNN.raw there by hand)
+  pictures SEGMENT_DIR [SEGMENT_DIR ...] [--window MS]
+        only the pictures (pictures/pic_NNNN.png) from events.raw and events.json: no source video needed, the
+        labels are not touched (the way to use the published dataset)
   label OUT_SEGMENT_DIR [--window MS] [--min-events N]
+        (rewrites labels/ and labels_all/ from the source annotations: needs the source videos)
         cut events.raw into pictures of WINDOW ms (grey nothing, white ON, black OFF, like the detector's
         input), give each picture the MOT17 person boxes of the frame shown in the middle of its window,
         mapped through the monitor homography: pictures/pic_NNNN.png, labels/pic_NNNN.txt (YOLO "0 cx cy w h",
@@ -33,6 +37,7 @@ from bench_mot import PERSON_CLASSES, load_gt, seq_info  # noqa: E402
 from evt2 import PIC, check, decode, picture, read_raw, to_picture_coords  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
+MOTION_PEAK = 1.10  # see label_segment: the motion fit's peak over the median of its curve (set 2026-11-09)
 PY = ROOT / "work/venv/bin/python"
 
 
@@ -103,7 +108,7 @@ def local_seq_dir(path):
              f"and tools/pp22_prep.py) under {ROOT / 'work/datasets'} (see the README)")
 
 
-def label_segment(out, window_ms=50, n_previews=4, min_events=20):
+def label_segment(out, window_ms=50, n_previews=4, min_events=20, dry=False):
     seg = json.loads((out / "segment.json").read_text())
     seq_dir = local_seq_dir(seg["seq_dir"])
     with open(out / "events.raw", "rb") as f:
@@ -247,6 +252,44 @@ def label_segment(out, window_ms=50, n_previews=4, min_events=20):
             pc_of_t = lambda us, s_=slope, c_=icpt + a: c_ + s_ * (us / 1e6)  # noqa: E731
             sync = {**sync, "offset_s": sync["offset_s"] + a, "alias_fixed_s": a}
         sync["alias_check_density"] = [round(v, 4) for v in dens]
+    # No accepted marker fit: the START command times the labels only to about +-0.5 s (2026-11-09: half of the 91
+    # such segments were 0.2-0.6 s off by their events). Fit the time from the motion instead: the shift of the video's
+    # boxes (-1..+2 s in 25 ms steps from the START command; the first event follows the command by -0.4..+1.5 s) that
+    # puts the most active pixels inside them, on every second picture, density smoothed over three steps; kept when its
+    # peak stands out of the curve (MOTION_PEAK), is not at the end of the range and boxes exist at 80 % of the shifts.
+    mfit = None
+    if sync.get("method", "").startswith("start command") or dry:
+        samples = [cv2.integral((pic_at(k) != 128).astype(np.float32)) for k in range(0, n_pics, 2)]
+
+        def density(off):
+            tot = area = 0.0
+            for i, I in enumerate(samples):
+                for x0, y0, x1, y1 in boxes_at(seg["pc_start"] + off + (2 * i + 0.5) * window_ms / 1000):
+                    X0, Y0, X1, Y1 = int(x0 * 319), int(y0 * 319), int(x1 * 319) + 1, int(y1 * 319) + 1
+                    tot += I[Y1, X1] - I[Y0, X1] - I[Y1, X0] + I[Y0, X0]
+                    area += (X1 - X0) * (Y1 - Y0)
+            return (tot / area, 1) if area else (0.0, 0)
+
+        offs = np.round(np.arange(-1.0, 2.0001, 0.025), 3)
+        dd = [density(o) for o in offs]
+        d, has = np.array([v for v, _ in dd]), np.array([h for _, h in dd])
+        ds = np.convolve(d, np.ones(3) / 3, mode="same")
+        ds[0], ds[-1] = d[0], d[-1]
+        i = int(ds.argmax())
+        mfit = {"offset_s": float(offs[i]), "peak_over_median": round(float(ds[i] / max(np.median(ds), 1e-9)), 4),
+                "gain_over_start_command": round(float(ds[i] / max(ds[int(np.argmin(np.abs(offs)))], 1e-9)), 4),
+                "at_range_end": bool(i < 2 or i > len(offs) - 3), "shifts_with_boxes": round(float(has.mean()), 3)}
+    if dry:
+        tm = t[-1] / 2
+        print(json.dumps({"segment": str(out), "sync": sync.get("method"),
+                          "current_offset_s": round(pc_of_t(tm) - seg["pc_start"] - tm / 1e6, 4), **mfit}), flush=True)
+        return
+    if mfit is not None:
+        if mfit["peak_over_median"] >= MOTION_PEAK and not mfit["at_range_end"] and mfit["shifts_with_boxes"] >= 0.8:
+            pc_of_t = lambda us, o_=mfit["offset_s"]: seg["pc_start"] + o_ + us / 1e6  # noqa: E731
+            sync = {"method": "motion fit (no marker)", **mfit, "fallback": sync}
+        else:
+            sync = {**sync, "motion_fit_rejected": mfit}
     n_boxes = n_boxes_all = n_ignore = 0
     for k in range(n_pics):
         pic = pic_at(k)
@@ -404,6 +447,36 @@ def label_histo_segment(out, seg, seq_dir, n_previews, min_events):
           f"sync {sync}, {stats}")
 
 
+def pictures_segment(out, window_ms=None):
+    """The pictures of a recorded segment from events.raw and events.json alone (no source video, labels untouched):
+    picture k holds the events with t - t(first event) in [k W, (k+1) W) ms (W = events.json window_ms unless given),
+    in the firmware's picture coordinates (X = 319 - y_sensor, Y = x_sensor), the blink-marker square
+    (events.json marker_mask_pic) set to 'nothing'. Histogram recordings: one picture per sensor frame."""
+    # room recordings (tools/real_label.py) have no events.json: 50 ms, no marker
+    ev_info = json.loads((out / "events.json").read_text()) if (out / "events.json").exists() else {}
+    mask = ev_info.get("marker_mask_pic")
+    (out / "pictures").mkdir(exist_ok=True)
+    with open(out / "events.raw", "rb") as f:
+        histo = f.read(8).startswith(b"% histo")
+    if histo:
+        from histo_raw import picture as histo_picture, read_frames
+        _, _, frames = read_frames(out / "events.raw")
+        pics = (histo_picture(fr) for fr in frames)
+        n = len(frames)
+    else:
+        w = window_ms or ev_info.get("window_ms", 50)
+        _, words = read_raw(out / "events.raw")
+        ev = decode(words)
+        t = ev["t"] - ev["t"][0]
+        n = int(t[-1] // (w * 1000)) + 1
+        pics = (picture(ev, (t >= k * w * 1000) & (t < (k + 1) * w * 1000)) for k in range(n))
+    for k, pic in enumerate(pics):
+        if mask:
+            pic[mask[1]:mask[3], mask[0]:mask[2]] = 128
+        cv2.imwrite(str(out / "pictures" / f"pic_{k:04d}.png"), pic)
+    print(f"{out.name}: {n} pictures")
+
+
 def main(argv):
     cmd = argv[0]
     opts = {argv[i]: argv[i + 1] for i in range(1, len(argv) - 1) if argv[i].startswith("--")}
@@ -423,6 +496,12 @@ def main(argv):
         fetch_segment(Path(args[0]))
     elif cmd == "label":
         label_segment(Path(args[0]), int(opts.get("--window", 50)), min_events=int(opts.get("--min-events", 20)))
+    elif cmd == "timecheck":
+        for a in args:
+            label_segment(Path(a), int(opts.get("--window", 50)), dry=True)
+    elif cmd == "pictures":
+        for a in args:
+            pictures_segment(Path(a), int(opts["--window"]) if "--window" in opts else None)
     else:
         sys.exit(__doc__)
 
