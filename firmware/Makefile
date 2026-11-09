@@ -124,14 +124,14 @@ endif
 ifdef DISPLAY_ROT180
 DEFS     += -DVIEW_ROT180=1
 endif
-# Network (default: the demo): person_room_v7_160_hf_int8 at NN_SIZE=160, the 160 px detector fine-tuned with the room
-# recordings (tools/room_sim.py: faster and more accurate in the room than 192 px);
-# person_evt_v4_int8 (monitor passes only; the paper's monitor benches: make MODEL=person_evt_v4_int8 NN_SIZE=192)
-# or st_yololcv1_192_int8 (ST's COCO model)
+# Network (default: the demo): person_all_v8_160_hf_int8 at NN_SIZE=160, the 160 px detector trained on all of
+# N-People (models/paper/row5_all_160; since 2026-11-09); person_room_v7_160_hf_int8 (the earlier demo network: monitor
+# passes + room recordings), person_evt_v4_int8 (monitor passes only; the paper's monitor benches:
+# make MODEL=person_evt_v4_int8 NN_SIZE=192 HEAD_FLOAT=0) or st_yololcv1_192_int8 (ST's COCO model)
 ifeq ($(HEAD_FLOAT),1)
-MODEL    ?= person_room_v7_160_hf_int8
+MODEL    ?= person_all_v8_160_hf_int8
 else
-MODEL    ?= person_room_v7_160_int8
+MODEL    ?= person_all_v8_160_int8
 endif
 MODEL_A  := PersonDetection/models/$(MODEL)_part_a.tflite
 MODEL_B  := PersonDetection/models/$(MODEL)_part_b.tflite

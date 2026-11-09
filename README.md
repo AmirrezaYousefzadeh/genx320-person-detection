@@ -15,11 +15,10 @@ A Prophesee **GenX320** event camera (320x320) on an **STM32F746G-DISCO** board 
 own display. No PC in the loop.
 
 - **Accuracy** (160 px, int8 body + float head; PC evaluation of the int8 files, stopping epochs chosen on training
-  data only): trained on all of N-People, 0.33-0.40 AP50 on held-out MOT17 replays and 0.17 on PersonPath22 replays.
-  The demo's network was trained earlier, with its stopping epoch picked on the test sequences (0.27-0.34 and 0.08).
-  The same architecture fine-tuned on the public PEDRo benchmark reaches 0.70 AP50 there at 160 px and 0.75 at
+  data only): the demo's network, trained on all of N-People, reaches 0.33-0.40 AP50 on held-out MOT17 replays and
+  0.17 on PersonPath22 replays. The same architecture fine-tuned on the public PEDRo benchmark reaches 0.70 AP50 there at 160 px and 0.75 at
   192 px. All of these networks are in `models/paper/`.
-- **Speed:** 360 ms per network run at 160 px on a stored picture; live in an office 378 ms (median; 410 ms at the
+- **Speed:** 362 ms per network run at 160 px on a stored picture; live in an office 378 ms (median; 410 ms at the
   90th percentile) with the event decoding running, an update every 0.44 s (2.3 per second).
 - **Dataset:** N-People, 172 k labelled 50 ms pictures, 1.21 M person boxes, recorded with this setup by replaying
   annotated pedestrian videos (MOT17, PersonPath22) on a monitor in front of the sensor, plus room recordings:

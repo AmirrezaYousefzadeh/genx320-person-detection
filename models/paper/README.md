@@ -22,8 +22,9 @@ Evaluate with `tools/eval_ap.py --model <folder>/hf_body_int8.tflite+<folder>/hf
 
 Rows 1-5 stop at the epoch with the lowest validation loss on ten PersonPath22 *training* windows (real recordings;
 `tools/finetune.py --val uid_vid_00000_w,... --exclude <the test segments>`), so no choice was made on test data. The
-network on the board (`firmware/PersonDetection/models/person_room_v7_160_hf_int8`) was trained earlier with the
-stopping epoch picked on the test sequences; the paper reports it next to row 1.
+network on the board since 9 November 2026 is row 5 (`firmware/PersonDetection/models/person_all_v8_160_hf_int8`). The
+earlier board network (`person_room_v7_160_hf_int8`, row 1's data) had its stopping epoch picked on the test sequences;
+the paper reports it next to row 1.
 
 The firmware's own copies (split in two for the board, with their head headers) are in
 `firmware/PersonDetection/models/`.

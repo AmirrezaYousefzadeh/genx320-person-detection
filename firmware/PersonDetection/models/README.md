@@ -12,10 +12,12 @@ Makefile picks the file of the chosen model).
 
 | model | input | what | paper |
 |---|---|---|---|
-| `person_room_v7_160_hf_int8` | 160 | **the demo** (default build): monitor passes + room recordings, float head; stopping epoch picked on the test sequences | the network on the board: speed, power; reported next to row 1 of the test-set table (its clean retraining) |
-| `person_room_v7_160_int8` | 160 | the same network, whole int8 (`HEAD_FLOAT=0`) | int8 rows |
-| `person_e1b_160_hf_int8` | 160 | the demo network fine-tuned further with simulated events | "+ simulated pictures" |
-| `person_room_v7_192_hf_int8` | 192 | the demo network at 192 px, float head | timing at 192 px |
+| `person_all_v8_160_hf_int8` | 160 | **the demo** (default build): trained on all of N-People (monitor passes, zoomed passes, simulated pictures, PersonPath22 windows, room recordings), float head; stopping epoch chosen on ten PersonPath22 training windows; the same network as `models/paper/row5_all_160` | the network on the board: last row of the test-set table, speed, power |
+| `person_all_v8_160_int8` | 160 | the same network, whole int8 (`HEAD_FLOAT=0`) | mixed precision (float head against whole int8) |
+| `person_room_v7_160_hf_int8` | 160 | the earlier demo network: monitor passes + room recordings, float head; stopping epoch picked on the test sequences | the earlier board network (test-set section); the live log of the throughput table |
+| `person_room_v7_160_int8` | 160 | the same network, whole int8 (`HEAD_FLOAT=0`) | - |
+| `person_e1b_160_hf_int8` | 160 | the earlier demo network fine-tuned further with simulated events | - (an earlier "+ simulated" network) |
+| `person_room_v7_192_hf_int8` | 192 | the earlier demo network at 192 px, float head | timing at 192 px |
 | `person_pedro128_hf_int8` | 128 | fine-tuned on PEDRo at 128 px, float head | PEDRo 128 px, timing at 128 px |
 | `person_evt_v3_int8` | 192 | monitor passes only (first week), int8 | sensor-preprocessing table (rate controller, anti-flicker, contrast filter rows) |
 | `person_evt_v4_int8` | 192 | as v3, trained with the minimum person size rule, int8; `_part_a2`: the input layer alone, for `SPARSE_L1=1` | sensor-preprocessing table (histogram row), the sparse first layer and the profile |
