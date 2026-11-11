@@ -12,7 +12,7 @@ Three subsets:
    a fixed square crop per 10 s segment in which people are 30–70 % of the view high ("zoomed"); mirroring; displayed
    brightness (frame values × 1, 0.6, 0.5, 0.35, 0.25); room dark or lit; the video at its own frame rate (30, 25 or
    14 fps) or interpolated to 60 fps; sensor configuration: events (rate controller only, v1–v3), events with the
-   anti-flicker filter (AFK; every other event pass), or the sensor's histogram frames (h1). `passes.csv` lists every
+   anti-flicker filter (AFK; all later event passes), or the sensor's histogram frames (h1). `passes.csv` lists every
    pass with its settings.
 2. **N-People/PersonPath22** — one 10 s window (the one with the most visible people) of each of 180 PersonPath22
    videos (Shuai et al. 2022, CC BY-NC 4.0), replayed at 60 fps, zoomed (people ~40 % of the view high), dark room,
@@ -23,7 +23,7 @@ Three subsets:
    three-person pictures composed from them (`dataset_real1_comp`, synthetic, with the recipe).
 
 Size (version 1.0): 837 recorded segments in 42 passes (10 s on the monitor, 20 s in the room; 2.4 h, 2.9 G events),
-172 k pictures of 50 ms, 1.21 M labelled people, 15.8 GB of raw events (16.0 GB unpacked, 12.4 GB as one zip).
+172 k pictures of 50 ms, 1.21 M labelled people, 15.8 GB of raw events (16.0 GB unpacked, 12.5 GB as one zip).
 `dataset_stats.md` has the numbers per group of passes.
 
 ## Getting started
@@ -128,9 +128,8 @@ mapped through the homography and the time fit into every 50 ms picture.
   from the motion: the shift of the boxes (−1 to +2 s, 25 ms steps) that puts the most active pixels inside them, kept
   when its peak stands out (at least 1.10 times the median of the curve, not at the end of the range; on 60
   marker-timed segments the 20 fits that passed were 38 ms from the marker in the median and at most 152 ms). The
-  other 57 stay timed by the start command and
-  are listed as `timing_uncertain` in `splits.json` and in `curation/flags.json`: leave them out of training and
-  testing (the repository's tools do, by their `events.json`).
+  other 57 stay timed by the start command and are listed as `timing_uncertain` in `splits.json` and in
+  `curation/flags.json`: leave them out of training and testing (the repository's tools do, by their `events.json`).
 - **Geometry.** `curation/align.csv` gives, per monitor segment, the label offset (2 px steps) and time shift that put
   the most active pixels inside the boxes, and the contrast of active-pixel density inside and outside the boxes. Read
   it with care: the offset estimates a label error only on full-view scenes from a static camera (MOT17-02, -04,
@@ -153,7 +152,8 @@ README.md, LICENSE.txt     this description; the licence and attributions (both 
 manifest.json              size and SHA-256 of the record's files; segment folders and bytes per pass in the zip
 N-People-v1.0.zip          all data; unzip gives the folder N-People/:
 
-N-People/splits.json       the test segments and the training segments, as paths below N-People/ (see Evaluation)
+N-People/splits.json       the test and the training segments, and the timing-uncertain ones to leave out of both, as
+                           paths below N-People/ (see Evaluation)
 N-People/passes.csv        one line per pass: subset, monitor, room light, view, frame rate, gain, mirrored, sensor
                            configuration, calibration (and its drift), and the paper test set its test segments form
 N-People/dataset_stats.md  the numbers per group of passes
