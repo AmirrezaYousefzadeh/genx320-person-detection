@@ -242,7 +242,12 @@ void detector_task(void *argument) {
 #ifdef DET_TEST_IMAGE /* make TEST_IMAGE=1: detect on the built-in test picture instead, to check the box drawing */
     extern const uint8_t nn_test_image[];
     gated = 0;
+#if SPARSE_L1 /* the sparse layer reads the grey picture: one channel of the RGB test image */
+    for (int i = 0; i < PERSON_NN_INPUT_LEN; i++) nn_input[i] = nn_test_image[3 * i];
+    r.status = person_nn_run(nn_input, nn_output);
+#else
     r.status = person_nn_run(nn_test_image, nn_output);
+#endif
 #else
     if (!gated) {
       r.status = person_nn_run(nn_input, nn_output);

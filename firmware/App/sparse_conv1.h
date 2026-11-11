@@ -6,8 +6,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-/* grey: the 192x192 picture (128 nothing, 255 ON, 0 OFF); out: 96x96x16 int8 NHWC, bit-exact with TFLite's conv;
-   returns the number of active (non-128) pixels */
+/* grey: the NxN picture (N = PERSON_NN_INPUT_SIZE; 128 nothing, 255 ON, 0 OFF); out: N/2 x N/2 x 16 int8 NHWC,
+   bit-exact with TFLite's conv; returns the number of active (non-128) pixels */
 uint32_t sparse_conv1(const uint8_t *grey, int8_t *out);
 #ifdef __cplusplus
 }

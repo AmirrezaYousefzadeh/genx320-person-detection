@@ -3,8 +3,10 @@ the "nothing" pixel is exactly 0 after quantisation (grey 128, zero point -128),
 everywhere except around the active pixels, whose 3x3x16 contributions are scattered. Bit-exact with TFLite's
 reference kernel (same per-channel requantisation: doubling high multiply, rounding shift).
 
-Usage: sparse_conv1.py MODEL.tflite [--n 5]   checks exactness on validation pictures and prints the active-pixel
-statistics that set the kernel's cost. Also exports the kernel's constants as a C header with --header FILE.
+Usage: sparse_conv1.py MODEL.tflite [--n 5]   checks exactness on validation pictures (at the model's input size N)
+and prints the active-pixel statistics that set the kernel's cost. Also exports the kernel's constants as a C header
+with --header FILE (firmware/PersonDetection/models/<MODEL>_conv1.h, used by make SPARSE_L1=1). MODEL is the whole
+network or its part A (the first layers are the same).
 """
 import argparse
 import sys
@@ -48,8 +50,10 @@ def requant(acc, mult, shift):
 
 class Conv1:
     def __init__(self, model_path):
-        from ai_edge_litert.interpreter import Interpreter
-        self.it = Interpreter(model_path, experimental_preserve_all_tensors=True)
+        from ai_edge_litert.interpreter import Interpreter, OpResolverType
+        # TFLite's reference kernels (as CMSIS-NN on the board), not the XNNPACK delegate, which rounds differently
+        self.it = Interpreter(model_path, experimental_preserve_all_tensors=True,
+                              experimental_op_resolver_type=OpResolverType.BUILTIN_REF)
         self.it.allocate_tensors()
         ops = [op for op in self.it._get_ops_details() if op["op_name"] != "DELEGATE"]
         conv = ops[1]
@@ -64,6 +68,8 @@ class Conv1:
         self.mult, self.shift = zip(*(quantize_multiplier(in_scale * float(s) / out_scale) for s in w_t["quantization_parameters"]["scales"]))
         self.out_index = out_t["index"]
         self.in_index = self.it.get_input_details()[0]["index"]
+        self.n = int(self.it.get_input_details()[0]["shape"][1])  # the input side N (192, 160, 128)
+        self.m = self.n // 2
         # The conv works on (int8 - input zero point) = the uint8 pixel itself: nothing 128, ON 255, OFF 0, and the
         # padding counts as 0. An all-"nothing" interior window therefore gives bias + 128 * sum of all taps; at the
         # last row/column (SAME padding puts the one pad row/column after) the taps outside are missing.
@@ -77,25 +83,27 @@ class Conv1:
             out[..., c] = requant(acc[..., c], self.mult[c], self.shift[c]) + self.out_zp
         return np.clip(out, self.out_zp, 127).astype(np.int8)  # ReLU: max(out, zp) then int8 saturation
 
-    def dense(self, grey192):
-        """straightforward reference: full conv on the int8 picture (pad after only: SAME with stride 2, 192 -> 96)"""
-        xp = np.zeros((193, 193), np.int32)  # (int8 - zp) = the uint8 value; the pad row/column after is 0
-        xp[:192, :192] = grey192.astype(np.int32)
-        acc = np.zeros((96, 96, 16), np.int64) + self.bias
+    def dense(self, grey):
+        """straightforward reference: full conv on the int8 picture (pad after only: SAME with stride 2, N -> N/2)"""
+        n, m = self.n, self.m
+        xp = np.zeros((n + 1, n + 1), np.int32)  # (int8 - zp) = the uint8 value; the pad row/column after is 0
+        xp[:n, :n] = grey.astype(np.int32)
+        acc = np.zeros((m, m, 16), np.int64) + self.bias
         for ky in range(3):
             for kx in range(3):
-                patch = xp[ky:ky + 192:2, kx:kx + 192:2]  # [96, 96]
+                patch = xp[ky:ky + n:2, kx:kx + n:2]  # [m, m]
                 acc += patch[..., None] * self.wsum[:, ky, kx][None, None, :]
         return self.finish(acc)
 
-    def sparse(self, grey192):
+    def sparse(self, grey):
         """the event-driven way: start from the constant, scatter the active pixels"""
-        acc = np.broadcast_to(self.acc0, (96, 96, 16)).copy()
-        acc[95, :, :] -= 128 * self.wsum[:, 2, :].sum(-1)   # last output row: tap ky = 2 is padding
-        acc[:, 95, :] -= 128 * self.wsum[:, :, 2].sum(-1)   # last output column: tap kx = 2 is padding
-        acc[95, 95, :] += 128 * self.wsum[:, 2, 2]          # the corner lost (2,2) twice
-        ys, xs = np.nonzero(grey192 != 128)
-        vals = grey192[ys, xs].astype(np.int64) - 128
+        m = self.m
+        acc = np.broadcast_to(self.acc0, (m, m, 16)).copy()
+        acc[m - 1, :, :] -= 128 * self.wsum[:, 2, :].sum(-1)   # last output row: tap ky = 2 is padding
+        acc[:, m - 1, :] -= 128 * self.wsum[:, :, 2].sum(-1)   # last output column: tap kx = 2 is padding
+        acc[m - 1, m - 1, :] += 128 * self.wsum[:, 2, 2]          # the corner lost (2,2) twice
+        ys, xs = np.nonzero(grey != 128)
+        vals = grey[ys, xs].astype(np.int64) - 128
         for y, x, v in zip(ys, xs, vals):
             # input (y, x) is tap (ky, kx) of output (oy, ox) when y = 2*oy + ky, x = 2*ox + kx
             for ky in range(3):
@@ -103,20 +111,20 @@ class Conv1:
                 if oy2 < 0 or oy2 % 2:
                     continue
                 oy = oy2 // 2
-                if oy >= 96:
+                if oy >= m:
                     continue
                 for kx in range(3):
                     ox2 = x - kx
                     if ox2 < 0 or ox2 % 2:
                         continue
                     ox = ox2 // 2
-                    if ox >= 96:
+                    if ox >= m:
                         continue
                     acc[oy, ox] += v * self.wsum[:, ky, kx]
         return self.finish(acc)
 
-    def tflite(self, grey192):
-        rgb = np.repeat(grey192[..., None], 3, -1)[None].astype(np.uint8)
+    def tflite(self, grey):
+        rgb = np.repeat(grey[..., None], 3, -1)[None].astype(np.uint8)
         self.it.set_tensor(self.in_index, rgb)
         self.it.invoke()
         return self.it.get_tensor(self.out_index)[0]
@@ -128,21 +136,28 @@ if __name__ == "__main__":
     ap.add_argument("--n", type=int, default=5)
     ap.add_argument("--header")
     args = ap.parse_args()
+    import cv2
     import finetune as ft
     k = Conv1(args.model)
-    _, val = ft.list_samples(",".join(f"work/dataset_v{i}" for i in (1, 2, 3)), ["09", "11"])
+    root = Path(__file__).resolve().parent.parent / "work"
+    _, val = ft.list_samples(",".join(str(root / f"dataset_v{i}") for i in (1, 2, 3)), ["09", "11"])
     rng = np.random.default_rng(1)
+    src = (np.arange(k.n) * 320 // k.n)  # the board's nearest-neighbour stretch (detector.c make_input)
+    ok = True
     for i in rng.choice(len(val), args.n, replace=False):
-        g = ft.load_picture(val[i][0]).numpy()[..., 0].astype(np.uint8)
+        g = cv2.imread(val[i][0], cv2.IMREAD_GRAYSCALE)[src][:, src]
         ref, dense, sparse = k.tflite(g), k.dense(g), k.sparse(g)
+        ok &= np.array_equal(sparse, ref)
         active = int((g != 128).sum())
-        print(f"{Path(val[i][0]).parent.parent.name}/{Path(val[i][0]).name}: active {active} of 36864 ({100 * active / 36864:.1f} %), "
+        print(f"{Path(val[i][0]).parent.parent.name}/{Path(val[i][0]).name}: active {active} of {k.n * k.n} ({100 * active / k.n ** 2:.1f} %), "
               f"dense == tflite: {np.array_equal(dense, ref)}, sparse == tflite: {np.array_equal(sparse, ref)}, "
               f"max diff {np.abs(sparse.astype(int) - ref.astype(int)).max()}")
+    if not ok:
+        sys.exit("the sparse kernel is NOT bit-exact with TFLite on this model: no header written")
     if args.header:
         with open(args.header, "w") as f:
-            f.write("/* Generated by tools/sparse_conv1.py from the deployed model: constants of the first convolution for\n"
-                    "   firmware/App/sparse_conv1.c. Do not edit. */\n#pragma once\n#include <stdint.h>\n")
+            f.write(f"/* Generated by tools/sparse_conv1.py from {Path(args.model).name} ({k.n} px): constants of the first\n"
+                    "   convolution for firmware/App/sparse_conv1.c. Do not edit. */\n#pragma once\n#include <stdint.h>\n")
             f.write(f"#define CONV1_OUT_ZP ({k.out_zp})\n")
             f.write("/* bias + 128 * (sum of all taps): the accumulator of an interior window with no event */\n")
             f.write("static const int32_t conv1_acc0[16] = {" + ", ".join(str(int(b)) for b in k.acc0) + "};\n")

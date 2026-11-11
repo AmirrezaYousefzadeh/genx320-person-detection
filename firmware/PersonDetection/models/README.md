@@ -12,8 +12,10 @@ Makefile picks the file of the chosen model).
 
 | model | input | what | paper |
 |---|---|---|---|
-| `person_all_v8_160_hf_int8` | 160 | **the demo** (default build): trained on all of N-People (monitor passes, zoomed passes, simulated pictures, PersonPath22 windows, room recordings), float head; stopping epoch chosen on ten PersonPath22 training windows; the same network as `models/paper/row5_all_160` | the network on the board: last row of the test-set table, speed, power |
-| `person_all_v8_160_int8` | 160 | the same network, whole int8 (`HEAD_FLOAT=0`) | mixed precision (float head against whole int8) |
+| `person_all_v9_160_hf_int8` | 160 | **the demo** (default build): trained on all of N-People after the dataset's timing fix (monitor passes, zoomed passes, simulated pictures, PersonPath22 windows, room recordings), float head; stopping epoch chosen on ten PersonPath22 training windows; the same network as `models/paper/row5_all_160`; `_part_a2` and `_conv1.h`: the event-driven first layer (`SPARSE_L1=1`) | the network on the board: last row of the test-set table, speed, power |
+| `person_all_v9_160_int8` | 160 | the same network, whole int8 (`HEAD_FLOAT=0`) | mixed precision (float head against whole int8) |
+| `person_all_v8_160_hf_int8` | 160 | the demo before the timing fix: trained on all of N-People (monitor passes, zoomed passes, simulated pictures, PersonPath22 windows, room recordings), float head; stopping epoch chosen on ten PersonPath22 training windows; row 5 before the timing fix | - |
+| `person_all_v8_160_int8` | 160 | the same network, whole int8 (`HEAD_FLOAT=0`) | - |
 | `person_room_v7_160_hf_int8` | 160 | the earlier demo network: monitor passes + room recordings, float head; stopping epoch picked on the test sequences | the earlier board network (test-set section); the live log of the throughput table |
 | `person_room_v7_160_int8` | 160 | the same network, whole int8 (`HEAD_FLOAT=0`) | - |
 | `person_e1b_160_hf_int8` | 160 | the earlier demo network fine-tuned further with simulated events | - (an earlier "+ simulated" network) |

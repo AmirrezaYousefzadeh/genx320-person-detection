@@ -6,9 +6,10 @@
  * so a window with no event gives bias + 128 * (sum of the taps), the same 16 values everywhere (conv1_const),
  * and only the 2-20 % active pixels change anything. This kernel therefore starts every output row from that
  * constant and scatters the contributions of the active pixels (each reaches at most 2x2 outputs with stride 2),
- * then requantises only the touched columns. Dense CMSIS-NN needs 192*192*9*16 multiplies whatever the picture;
- * this needs 64 per active pixel. The three identical RGB channels are folded into one (conv1_w).
- * Constants from tools/sparse_conv1.py (which also checks the exactness on the PC).
+ * then requantises only the touched columns. Dense CMSIS-NN needs N*N*9*16 multiplies whatever the picture (N the
+ * input side, PERSON_NN_INPUT_SIZE: 160 in the demo, 192, 128); this needs 64 per active pixel. The three identical
+ * RGB channels are folded into one (conv1_w). The constants are the model's own: PersonDetection/models/<MODEL>_conv1.h
+ * (tools/sparse_conv1.py --header, which also checks the exactness on the PC; the Makefile picks the file).
  *
  * Copyright (c) 2026 Amirreza Yousefzadeh, University of Twente. Licensed under the Apache License 2.0.
  */
@@ -16,10 +17,21 @@
 
 #include <string.h>
 
-#include "sparse_conv1_params.h"
+#include "person_nn.h"
 
-#define IN 192
-#define OUT 96
+#define C1_STR2(x) #x
+#define C1_STR(x) C1_STR2(x)
+#ifdef CONV1_PARAMS
+#include C1_STR(CONV1_PARAMS)
+#else
+#include "person_evt_v4_int8_conv1.h"
+#endif
+
+#define IN PERSON_NN_INPUT_SIZE /* even, a multiple of 4 (rows are read as 32-bit words) */
+#define OUT (IN / 2)
+#if IN % 4
+#error "sparse_conv1: the input side must be a multiple of 4"
+#endif
 #define CH 16
 #define NONE 0x80808080u /* four "nothing" pixels */
 

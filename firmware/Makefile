@@ -10,8 +10,9 @@
 #                     off: as configured it removes nearly all motion events, see the paper)
 #   make GATE=N       frame gate: skip the network below N active input pixels (150; 0 = off)
 #   make TEST_IMG=PersonDetection/test/evt_192x192.rgb   another built-in test picture (bench, TEST_IMAGE)
-#   make SPARSE_L1=1  event-driven first convolution (App/sparse_conv1.c) instead of TFLM's; 192 px int8 models only:
-#                     make SPARSE_L1=1 MODEL=person_evt_v4_int8 NN_SIZE=192 HEAD_FLOAT=0 (needs <MODEL>_part_a2.tflite)
+#   make SPARSE_L1=1  event-driven first convolution (App/sparse_conv1.c) instead of TFLM's, bit-exact, any input size
+#                     with or without the float head; a MODEL needs <MODEL>_part_a2.tflite and <MODEL>_conv1.h
+#                     (tools/build_hf.sh makes both; e.g. make SPARSE_L1=1 MODEL=person_evt_v4_int8 NN_SIZE=192 HEAD_FLOAT=0)
 #   make NN_SIZE=192  network input side (160 default); the MODEL must match (tools/resize_model.py, finetune.py --size)
 #   make RAW_BOXES=1  show the raw detections instead of the counted ones (see detector.c)
 #   make HEAD_FLOAT=0 the whole network in int8 (default 1: int8 body + float head, App/head_float.c;
@@ -124,23 +125,22 @@ endif
 ifdef DISPLAY_ROT180
 DEFS     += -DVIEW_ROT180=1
 endif
-# Network (default: the demo): person_all_v8_160_hf_int8 at NN_SIZE=160, the 160 px detector trained on all of
-# N-People (models/paper/row5_all_160; since 2026-11-09); person_room_v7_160_hf_int8 (the earlier demo network: monitor
-# passes + room recordings), person_evt_v4_int8 (monitor passes only; the paper's monitor benches:
+# Network (default: the demo): person_all_v9_160_hf_int8 at NN_SIZE=160, the 160 px detector trained on all of
+# N-People (models/paper/row5_all_160; since 2026-11-11, after the dataset's timing fix; v8 before it);
+# person_room_v7_160_hf_int8 (the first demo network: monitor passes + room recordings), person_evt_v4_int8 (monitor passes only; the paper's monitor benches:
 # make MODEL=person_evt_v4_int8 NN_SIZE=192 HEAD_FLOAT=0) or st_yololcv1_192_int8 (ST's COCO model)
 ifeq ($(HEAD_FLOAT),1)
-MODEL    ?= person_all_v8_160_hf_int8
+# (the demo build switches to the event-driven first layer once it has been checked on the board: SPARSE_L1=1)
+MODEL    ?= person_all_v9_160_hf_int8
 else
-MODEL    ?= person_all_v8_160_int8
+MODEL    ?= person_all_v9_160_int8
 endif
 MODEL_A  := PersonDetection/models/$(MODEL)_part_a.tflite
 MODEL_B  := PersonDetection/models/$(MODEL)_part_b.tflite
-# the event-driven first layer: 192 px, whole network in int8 (App/sparse_conv1.c is written for 192x192 input)
-ifdef SPARSE_L1
-ifneq ($(NN_SIZE),192)
-$(error SPARSE_L1=1 needs NN_SIZE=192 (and HEAD_FLOAT=0 and a 192 px int8 MODEL with a _part_a2 file))
-endif
-DEFS     += -DSPARSE_L1=1
+# the event-driven first layer (App/sparse_conv1.c): TFLM runs the second convolution alone (<MODEL>_part_a2.tflite),
+# the kernel uses the model's own first-layer constants (<MODEL>_conv1.h)
+ifeq ($(SPARSE_L1),1)
+DEFS     += -DSPARSE_L1=1 -DCONV1_PARAMS=$(MODEL)_conv1.h
 endif
 # a float-head model brings its head weights: PersonDetection/models/<MODEL>_head.h (tools/headfloat.py, build_hf.sh)
 ifeq ($(HEAD_FLOAT),1)
@@ -153,13 +153,13 @@ $(shell mkdir -p $(BUILD); [ "$$(cat $(FLAGS_FILE) 2>/dev/null)" = "$(DEFS)" ] |
 COMMON   := $(MCU) $(DEFS) $(OPT) $(addprefix -I,$(INCDIRS)) -ffunction-sections -fdata-sections -Wall \
             --specs=nano.specs -MMD -MP
 CFLAGS   := $(COMMON) -std=gnu11
-ifdef SPARSE_L1
+ifeq ($(SPARSE_L1),1)
 MODEL_A2 := PersonDetection/models/$(MODEL)_part_a2.tflite
 endif
 ifdef TEST_IMG
 ASFLAGS_TEST := -DNN_TEST_IMAGE='"$(TEST_IMG)"'
 endif
-ASFLAGS  := $(MCU) -g3 -x assembler-with-cpp -DNN_MODEL_A='"$(MODEL_A)"' -DNN_MODEL_B='"$(MODEL_B)"' $(if $(SPARSE_L1),-DNN_MODEL_A2='"$(MODEL_A2)"',) $(ASFLAGS_TEST)
+ASFLAGS  := $(MCU) -g3 -x assembler-with-cpp -DNN_MODEL_A='"$(MODEL_A)"' -DNN_MODEL_B='"$(MODEL_B)"' $(if $(MODEL_A2),-DNN_MODEL_A2='"$(MODEL_A2)"',) $(ASFLAGS_TEST)
 LDSCRIPT := Core/STM32F746NGHX_FLASH.ld
 LDFLAGS  := $(MCU) -T$(LDSCRIPT) --specs=nosys.specs --specs=nano.specs -Wl,-Map=$(BUILD)/$(TARGET).map \
             -Wl,--gc-sections -static -u _printf_float

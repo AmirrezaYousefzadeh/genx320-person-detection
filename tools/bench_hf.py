@@ -27,6 +27,10 @@ def main(elf, body, head, size, test=None):
     out = np.frombuffer(raw, dtype="<f4", offset=4 * (8 + RUNS + MAX_OPS), count=out_len)
     print(f"status {status}; per network run (int8 body + float head): " + ", ".join(f"{r:.1f} ms" for r in runs)
           + f"; arena A {arena[0] / 1024:.0f} KiB, B {arena[1] / 1024:.0f} KiB")
+    ops = h[8 + RUNS:8 + RUNS + MAX_OPS] / cpu_hz * 1e3
+    print(f"first operator {ops[0]:.2f} ms, second {ops[1]:.2f} ms (SPARSE_L1 builds: the event-driven layer, then the second "
+          f"convolution); SPARSE_L1 check against TFLM on the board: {int(h[6 + RUNS])} mismatches after the second "
+          f"convolution, final outputs differ by at most {int(h[7 + RUNS]) / 1000:.3f}")
     # the same input bytes on the PC: the first size*size*3 bytes of the built-in test image
     img = np.fromfile(test or ROOT / "firmware/PersonDetection/test/room_192x192.rgb", np.uint8)[:size * size * 3]
     from ai_edge_litert.interpreter import Interpreter, OpResolverType

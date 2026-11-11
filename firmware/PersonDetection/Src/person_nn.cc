@@ -10,9 +10,6 @@
  */
 #include "person_nn.h"
 #include "head_float.h"
-#if HEAD_FLOAT && SPARSE_L1
-#error "HEAD_FLOAT with SPARSE_L1 is not supported (its bench compares float outputs)"
-#endif
 
 #include <stdio.h>
 #include <string.h>
@@ -137,9 +134,13 @@ int person_nn_init(void) {
   const TfLiteTensor *in2 = part_a2->input(0), *mid_a = part_a2->output(0);
   const TfLiteTensor *mid_b = part_b->input(0), *out = part_b->output(0);
   if (in2->type != kTfLiteInt8 || in2->bytes != kConv1Len || mid_a->type != kTfLiteInt8 || mid_a->bytes != kMiddleLen ||
-      mid_b->type != kTfLiteInt8 || mid_b->bytes != kMiddleLen || out->type != kTfLiteFloat32 ||
-      out->bytes != PERSON_NN_OUTPUT_LEN * sizeof(float))
+      mid_b->type != kTfLiteInt8 || mid_b->bytes != kMiddleLen)
     return -4;
+#if HEAD_FLOAT
+  if (out->type != kTfLiteInt8 || out->bytes != (size_t)PERSON_NN_GRID * PERSON_NN_GRID * 256) return -4;
+#else
+  if (out->type != kTfLiteFloat32 || out->bytes != PERSON_NN_OUTPUT_LEN * sizeof(float)) return -4;
+#endif
   return 0;
 #else
   part_a = load(nn_model_a, interpreter_buffer_a, arena_a, kArenaSizeA);
@@ -225,7 +226,14 @@ void person_nn_bench(void) {
         /* and the whole network through TFLM's path, compared with the sparse path's final output */
         memcpy(part_b->input(0)->data.int8, ref, kMiddleLen);
         if (part_b->Invoke() == kTfLiteOk) {
+#if HEAD_FLOAT
+          static float ref_out[PERSON_NN_OUTPUT_LEN] __attribute__((section("NN_Arena"), aligned(16)));
+          const TfLiteTensor *ob = part_b->output(0);
+          head_float(ob->data.int8, ob->params.scale, ob->params.zero_point, ref_out);
+          const float *o = ref_out;
+#else
           const float *o = part_b->output(0)->data.f;
+#endif
           float worst = 0;
           for (size_t i = 0; i < PERSON_NN_OUTPUT_LEN; i++) {
             float d = o[i] - nn_bench.output[i];
