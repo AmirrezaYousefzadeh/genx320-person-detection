@@ -11,7 +11,8 @@
 #   make GATE=N       frame gate: skip the network below N active input pixels (150; 0 = off)
 #   make TEST_IMG=PersonDetection/test/evt_192x192.rgb   another built-in test picture (bench, TEST_IMAGE)
 #   make SPARSE_L1=1  event-driven first convolution (App/sparse_conv1.c) instead of TFLM's, bit-exact, any input size
-#                     with or without the float head; a MODEL needs <MODEL>_part_a2.tflite and <MODEL>_conv1.h
+#                     with or without the float head; on in the demo build (SPARSE_L1=0 turns it off); a MODEL needs
+#                     <MODEL>_part_a2.tflite and <MODEL>_conv1.h
 #                     (tools/build_hf.sh makes both; e.g. make SPARSE_L1=1 MODEL=person_evt_v4_int8 NN_SIZE=192 HEAD_FLOAT=0)
 #   make NN_SIZE=192  network input side (160 default); the MODEL must match (tools/resize_model.py, finetune.py --size)
 #   make RAW_BOXES=1  show the raw detections instead of the counted ones (see detector.c)
@@ -130,7 +131,10 @@ endif
 # person_room_v7_160_hf_int8 (the first demo network: monitor passes + room recordings), person_evt_v4_int8 (monitor passes only; the paper's monitor benches:
 # make MODEL=person_evt_v4_int8 NN_SIZE=192 HEAD_FLOAT=0) or st_yololcv1_192_int8 (ST's COCO model)
 ifeq ($(HEAD_FLOAT),1)
-# (the demo build switches to the event-driven first layer once it has been checked on the board: SPARSE_L1=1)
+ifeq ($(origin MODEL),undefined)
+# the demo runs the event-driven first layer (bit-exact on the PC; work/board_v9.sh checks it on the board)
+SPARSE_L1 ?= 1
+endif
 MODEL    ?= person_all_v9_160_hf_int8
 else
 MODEL    ?= person_all_v9_160_int8
