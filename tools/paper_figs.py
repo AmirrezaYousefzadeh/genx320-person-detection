@@ -3,8 +3,8 @@
   pulse    events per millisecond of the same MOT17 video replayed at its source frame rate and at 60 fps
            (needs two segments' events.raw; the frame steps of the monitor are what the sensor sees)
   pareto   PEDRo AP50 against the network time on the board for the input sizes (timings from work/results)
-  pair     the same moment three ways: the source frame with its crop, the sensor's picture with the mapped
-           boxes, the simulated picture (tools/evsim.py) of the same crop
+  pair     the same moment four ways: the source frame with its crop, the crop on the screen, the sensor's picture with
+           the mapped boxes, the simulated picture (tools/evsim.py) of the same crop
 Usage: paper_figs.py pulse|pareto|pair|all [--sim DIR]
 """
 import json
@@ -110,7 +110,7 @@ def fig_pair(sim=None, seg="work/dataset_camp60_dark_z40_r0_g100/MOT17-02-FRCNN_
     tx, ty, ts = (int(v) for v in warp[warp.index("target") + 1:warp.index("target") + 4])  # the crop's square in the picture
     src = ROOT / "work/datasets/mot17_60/train/MOT17-02-FRCNN/img1" / f"{frame + 1:06d}.jpg"
     img = cv2.cvtColor(cv2.imread(str(src)), cv2.COLOR_BGR2RGB)
-    panels = [(img, "source frame and the crop (blue)", None)]
+    panels = [(img, "source frame and the crop (green)", None)]
     crop = img[int(cy0):int(cy0 + side), int(cx0):int(cx0 + side)]
     panels.append((crop, "the crop on the screen", "crop"))
     pic = cv2.imread(str(seg / "pictures" / f"pic_{k:04d}.png"), cv2.IMREAD_GRAYSCALE)
@@ -144,7 +144,7 @@ def fig_pair(sim=None, seg="work/dataset_camp60_dark_z40_r0_g100/MOT17-02-FRCNN_
                                            ls="-" if c == 0 else (0, (3, 1.5))))
         else:
             ax.imshow(im)
-            ax.add_patch(plt.Rectangle((cx0, cy0), side, side, fill=False, ec=BLUE, lw=1.2))
+            ax.add_patch(plt.Rectangle((cx0, cy0), side, side, fill=False, ec=AQUA, lw=1.4))
         ax.set_title(title, fontsize=7, color=INK2, pad=3)
         ax.axis("off")
     fig.savefig(FIG / "pair.pdf", dpi=200)

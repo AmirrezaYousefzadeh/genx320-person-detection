@@ -25,6 +25,8 @@ own display. No PC in the loop.
   annotated pedestrian videos (MOT17, PersonPath22) on a monitor in front of the sensor, plus room recordings:
   4TU.ResearchData, [doi:10.4121/e9e04333-cc28-4bfe-9079-7bb252203b02](https://doi.org/10.4121/e9e04333-cc28-4bfe-9079-7bb252203b02).
   Its description: [`docs/N-People.md`](docs/N-People.md).
+- **Technical notes:** the engineering details and measurements behind the paper (data path, sensor blocks,
+  recording, label checks, time budget, sparsity, power estimate): [`docs/technical_notes.md`](docs/technical_notes.md).
 
 ## Repository
 
@@ -33,7 +35,7 @@ own display. No PC in the loop.
 | `firmware/` | the board's firmware: sensor set-up and event decoding (`App/events.c`), sensor-side filters and histogram mode (`App/sensor_filters.c`, `App/frames.c`), detector and counting (`App/detector.c`), float head (`App/head_float.c`), event-driven first layer (`App/sparse_conv1.c`), display, microSD recorder (`App/sdcard.c`); the network on TensorFlow Lite Micro + CMSIS-NN (`PersonDetection/`, models in `PersonDetection/models/`) |
 | `tools/` | everything on the PC: the monitor bench, recording and labelling, curation, the event simulator, training, evaluation and the board measurements (below) |
 | `models/paper/` | the networks behind the paper's accuracy tables (int8, and int8 body + float head) |
-| `docs/` | the dataset description, the photo and the video |
+| `docs/` | the dataset description, the technical notes and the demo video |
 
 The firmware also contains an experimental counting head (`App/count_head.c`, `tools/count_*.py`; off by default,
 `make COUNT_HEAD=1`) that the paper does not use.
