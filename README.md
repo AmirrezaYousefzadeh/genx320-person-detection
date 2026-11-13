@@ -18,9 +18,9 @@ own display. No PC in the loop.
   data only): the demo's network, trained on all of N-People, reaches 0.33-0.39 AP50 on held-out MOT17 replays and
   0.18 on PersonPath22 replays (the 54 test videos with reliable timing). The same architecture fine-tuned on the public PEDRo benchmark reaches 0.70 AP50 there at 160 px and 0.75 at
   192 px. All of these networks are in `models/paper/`.
-- **Speed:** 362 ms per network run at 160 px on a stored picture; live in an office 378 ms (median; 410 ms at the
-  90th percentile) with the event decoding running, an update every 0.44 s (2.3 per second). Measured with the dense
-  first layer; the demo build now runs the event-driven first layer (bit-exact), which should save about 40 ms per run.
+- **Speed:** 312 ms per network run at 160 px on a stored picture with the event-driven first layer (362 ms without);
+  live in an office 339 ms (median; 383 ms at the 90th percentile) with the event decoding running, an update every
+  0.40 s (2.4 per second).
 - **Dataset:** N-People, 172 k labelled 50 ms pictures, 1.21 M person boxes, recorded with this setup by replaying
   annotated pedestrian videos (MOT17, PersonPath22) on a monitor in front of the sensor, plus room recordings:
   4TU.ResearchData, [doi:10.4121/e9e04333-cc28-4bfe-9079-7bb252203b02](https://doi.org/10.4121/e9e04333-cc28-4bfe-9079-7bb252203b02).
