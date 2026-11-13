@@ -111,6 +111,33 @@ on the bench picture; live in an office (683 updates in 5 min, median 104 kev/s,
 the same size and the dense first layer) 378 ms median (410 at the 90th percentile), an update every 0.44 s; the event
 task takes 3-11 % of the core. Replayed room recordings: 448-565 ms per run.
 
+## 7b. Per-operator times and the event-driven layer on the board (2026-11-13)
+
+`tools/bench_ops.py` on the bench builds (stored picture: the room test picture, 5-6 % active pixels), int8 body +
+float head, 216 MHz; network run in ms, standard / event-driven first layer:
+
+| input | layer 1 | whole run | gain |
+|---|---|---|---|
+| 128 px | 36.5 / 5.1 | 232.4 / 200.8 | 13.6 % |
+| 160 px | 57.0 / 8.9 | 361.9 / 312.4 | 13.7 % |
+| 192 px | 84.6 / 11.1 | 524.4 / 449.7 | 14.2 % |
+
+(192 px whole int8: 496.0 / 434.6.) The exactness check on the board: 0 mismatches after the second convolution in
+every build. Efficiency at 160 px: layer 1 0.23 multiply-adds per cycle (three input channels, SDRAM arena), the
+convolutions on the large maps 0.54-0.66, the grid convolutions 0.76-0.82, the depthwise layers 0.15-0.17. Replaying
+the room recordings 181-188 from the microSD card through the live pipeline (`tools/replay_check.py`): median network
+523 -> 450 ms, update 594 -> 515 ms (1.68 -> 1.94 per second); both slower than live because the replay also reads the
+card. Results: `work/results/bench_ops.json` (development repository).
+
+## 7c. Energy model and frame-camera baseline
+
+`tools/energy_table.py`: energy per update = measured time x datasheet current (0.50 W in Run mode, 0.26 W in Sleep
+mode for the core and the enabled peripherals); the GenX320 (~3 mW) and a low-power frame sensor such as the HM01B0
+(< 2 mW at QVGA 30 fps) are negligible next to the microcontroller. `tools/rgb_baseline.py`: ST's COCO YOLO-LC
+without fine-tuning on the RGB frames that the monitor showed at the same moments, cropped to the sensor's view and
+scored on the same people: 0.66 AP50 (MOT17 zoomed 60 fps, 160 px) and 0.45 (PersonPath22 test), against 0.35 and 0.18
+for the event network on the board; at 192 px (int8 as shipped) 0.70 and 0.45.
+
 ## 8. Sparsity
 
 - **First layer.** 94-98 % of the input pixels are "nothing". After quantisation the first convolution sees

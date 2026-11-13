@@ -11,6 +11,7 @@ whose protocol counts every box):
 Usage: eval_suite.py OUT.json MODEL[=NAME] [MODEL[=NAME] ...] [--sets mon30,room,...] [--size 160]
 """
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -55,8 +56,11 @@ def main():
             data, select, min_h = S[s]
             if not data:
                 continue
+            env = dict(os.environ)
+            if os.environ.get("EVAL_DUMP_DIR"):  # per-segment detections for tools/paired_bootstrap.py
+                env["EVAL_DUMP"] = str(Path(os.environ["EVAL_DUMP_DIR"]) / f"{name.replace('/', '__')}__{s}.json")
             r = subprocess.run([PY, "-I", str(ROOT / "tools/eval_ap.py"), "--model", path, "--data", data, "--select", select,
-                                "--size", str(size), "--min-h", str(min_h)], capture_output=True, text=True)
+                                "--size", str(size), "--min-h", str(min_h)], capture_output=True, text=True, env=env)
             try:
                 v = json.loads(r.stdout.strip().splitlines()[-1])
             except (IndexError, ValueError):

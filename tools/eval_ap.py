@@ -151,7 +151,7 @@ def ap_from(dets, n_gt):
     return float(np.mean([prec[i] if i < len(prec) else 0.0 for i in idx]))
 
 
-def evaluate(results, thr=0.5, groups=None, n_boot=200):
+def evaluate(results, thr=0.5, groups=None, n_boot=200, dump=None):
     """results: [(scores, boxes, gt, ign)] -> metrics. groups: the segment of each result; with it, AP50_std is the
     standard deviation of AP50 over n_boot resamplings of the segments (a bootstrap over segments, not pictures:
     consecutive pictures of one segment are not independent)."""
@@ -187,6 +187,14 @@ def evaluate(results, thr=0.5, groups=None, n_boot=200):
             if t == 0.5:
                 per_pic50.append((dets_t, len(gt)))
     aps = {float(t): ap_from(per_t[t], n_gt) for t in ious}
+    if dump and groups is not None:  # per segment: the detections at IoU 0.5 and the people, for paired comparisons
+        segd = {}
+        for g, (dets, n) in zip(groups, per_pic50):
+            e = segd.setdefault(g, {"dets": [], "n": 0})
+            e["dets"].extend([round(float(sc), 5), int(tp)] for sc, tp in dets)
+            e["n"] += int(n)
+        Path(dump).parent.mkdir(parents=True, exist_ok=True)
+        Path(dump).write_text(json.dumps(segd))
     ap50_std = None
     if groups is not None and len(set(groups)) > 1:
         by_seg = {}
@@ -239,7 +247,7 @@ def main():
         for (p, gt, ign), out in zip(chunk, outs):
             s, b = decode(np.asarray(out))
             results.append((s, b, gt, ign))
-    res = evaluate(results, a.thr, groups=[Path(p).parent.parent.name for p, _, _ in data])
+    res = evaluate(results, a.thr, groups=[Path(p).parent.parent.name for p, _, _ in data], dump=os.environ.get("EVAL_DUMP"))
     res.update({"model": a.model, "data": a.data, "select": a.select, "size": a.size, "stride": a.stride,
                 "min_h": a.min_h, "seconds": round(time.time() - t0, 1)})
     print(json.dumps(res))

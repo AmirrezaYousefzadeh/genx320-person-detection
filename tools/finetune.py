@@ -135,12 +135,13 @@ def encode_targets(boxes):
 
 
 MAX_BOXES = 64
+DATA_SEED = 1  # the order of the training pictures (--seed changes it, and the random augmentations)
 
 
 def make_dataset(samples, batch, training):
     """pictures and their targets; targets are encoded on the fly from the boxes (big sets do not fit as constants)"""
     if training:  # a global shuffle once; the buffer below only mixes neighbours
-        order = np.random.default_rng(1).permutation(len(samples))
+        order = np.random.default_rng(DATA_SEED).permutation(len(samples))
         samples = [samples[i] for i in order]
     paths = np.array([p for p, _ in samples])
     boxes = np.zeros((len(samples), MAX_BOXES, 5), np.float32)
@@ -150,7 +151,7 @@ def make_dataset(samples, batch, training):
             boxes[i, j] = b
     ds = tf.data.Dataset.from_tensor_slices((paths, boxes))
     if training:
-        ds = ds.shuffle(min(len(samples), 20000), seed=1, reshuffle_each_iteration=True)
+        ds = ds.shuffle(min(len(samples), 20000), seed=DATA_SEED, reshuffle_each_iteration=True)
 
     def enc(b):
         y, corners = encode_targets([tuple(r) for r in b if r[0] >= 0])
@@ -354,7 +355,14 @@ def main():
     ap.add_argument("--val-n", type=int, default=0, help="validation loss on at most this many pictures (a fixed random subset; 0: all)")
     ap.add_argument("--small", choices=("drop", "ignore"), default="drop", help="a person below --min-h: leave the picture out, or keep it with that person as a region to ignore")
     ap.add_argument("--patience", type=int, default=15, help="stop when the validation loss has not improved for this many epochs")
+    ap.add_argument("--seed", type=int, default=None, help="another training of the same recipe: picture order, augmentations and "
+                    "TensorFlow's random state from this seed (default: the fixed order of the paper's first runs)")
     args = ap.parse_args()
+    if args.seed is not None:
+        global DATA_SEED
+        DATA_SEED = args.seed
+        tf.random.set_seed(args.seed)
+        np.random.seed(args.seed)
     if args.cpu:  # the queue's thread count, not every core of the shared machine
         tf.config.set_visible_devices([], "GPU")
         n = int(os.environ.get("NUM_THREADS", "4"))
