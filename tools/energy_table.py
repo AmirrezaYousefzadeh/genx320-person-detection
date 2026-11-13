@@ -44,6 +44,7 @@ def replay_ms(build):
 
 
 LIVE_OFFICE_NET_MS, LIVE_OFFICE_UPDATE_MS = 378.0, 440.0  # dense layer 1, live in an office (683 updates, 104 kev/s)
+LIVE_ED_NET_MS, LIVE_ED_UPDATE_MS = 339.0, 402.0  # event-driven layer 1, live in the office (2026-11-13, 728 updates, 136 kev/s)
 FRAME_CAMERA_PERIOD_MS = 1000 / 30  # a frame sensor at 30 fps (e.g. HM01B0, < 2 mW at QVGA)
 
 
@@ -62,7 +63,7 @@ def main(latex=False):
     ev_wait = LIVE_OFFICE_UPDATE_MS - LIVE_OFFICE_NET_MS - WORK_MS  # the 50 ms window and scheduling
     share_ev = EVENT_TASK_PER_KEVS * EMPTY_ROOM_KEVS
     rows = [row("Events, dense layer 1", LIVE_OFFICE_NET_MS, ev_wait, share_ev),
-            row("Events, event-driven layer 1", t_s * live, ev_wait, share_ev),
+            row("Events, event-driven layer 1", LIVE_ED_NET_MS, LIVE_ED_UPDATE_MS - LIVE_ED_NET_MS - WORK_MS, share_ev),
             row("Histogram frames, event-driven layer 1", t_s, HISTO_FRAME_MS / 2, 0.01),
             row("RGB frames, same network (projected)", t_d, FRAME_CAMERA_PERIOD_MS / 2, 0.015)]
     for r in rows:

@@ -127,7 +127,10 @@ every build. Efficiency at 160 px: layer 1 0.23 multiply-adds per cycle (three i
 convolutions on the large maps 0.54-0.66, the grid convolutions 0.76-0.82, the depthwise layers 0.15-0.17. Replaying
 the room recordings 181-188 from the microSD card through the live pipeline (`tools/replay_check.py`): median network
 523 -> 450 ms, update 594 -> 515 ms (1.68 -> 1.94 per second); both slower than live because the replay also reads the
-card. Results: `work/results/bench_ops.json` (development repository).
+card. Live in the office (2026-11-13, 5 min, a person moving, 728 updates, median 136 kev/s): network 339 ms
+median (383 ms at the 90th percentile), an update every 402 ms (2.4 per second), event task 5 % of the core (median,
+14 % at the 90th percentile); the earlier log with the standard first layer gave 378 ms and 2.3 per second at 104 kev/s.
+Results: `work/results/bench_ops.json` (development repository).
 
 ## 7c. Energy model and frame-camera baseline
 
